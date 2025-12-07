@@ -1,6 +1,6 @@
-## ReadyOrNotRoblox
+## WeaponSystemTesting
 
-Source code for ReadyOrNotRoblox. This game was generated using Nevermore's CLI.
+Source code for WeaponSystemTesting. This game was generated using Nevermore's CLI.
 
 # Tools
 
