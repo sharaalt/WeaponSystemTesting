@@ -1,0 +1,19 @@
+{
+  "name": "readyornotroblox",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "sharafzada",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@quenty/binder": "^14.21.0",
+    "@quenty/clienttranslator": "^14.20.0",
+    "@quenty/cmdrservice": "^13.24.0",
+    "@quenty/loader": "^10.9.0",
+    "@quenty/servicebag": "^11.13.0"
+  }
+}

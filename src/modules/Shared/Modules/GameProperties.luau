@@ -1,0 +1,3 @@
+local GameProperties = {}
+
+return GameProperties

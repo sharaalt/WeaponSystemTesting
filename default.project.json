@@ -1,0 +1,41 @@
+{
+  "name": "ReadyOrNotRoblox",
+  "globIgnorePaths": [ "**/.package-lock.json" ],
+  "tree": {
+    "$className": "DataModel",
+    "StarterPack": {
+      "$path": "src/StarterPack"
+    },
+    "ServerScriptService": {
+      "ReadyOrNotRoblox": {
+        "$className": "Folder",
+        "game": {
+          "$path": "src/modules"
+        },
+        "node_modules": {
+          "$path": "node_modules"
+        }
+      },
+      "ReadyOrNotRobloxScripts": {
+        "$path": "src/scripts/Server"
+      }
+    },
+    "ReplicatedStorage": {
+      "Dependencies": {
+        "$className": "Folder",
+        "$path": "Packages"
+      },
+      "Shared": {
+        "$className": "Folder",
+        "$path": "src/ReplicatedStorage"
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "ReadyOrNotRobloxScripts": {
+          "$path": "src/scripts/Client"
+        }
+      }
+    }
+  }
+}
