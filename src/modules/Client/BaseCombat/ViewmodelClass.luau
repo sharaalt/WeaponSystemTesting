@@ -29,16 +29,24 @@ function ViewmodelClass.new()
 	return self
 end
 
--- ========================
--- ====== Public API ======
--- ========================
-function ViewmodelClass:bindViewmodel(object: Instance, viewmodelName: string)
-	if self._viewmodel then
+-- ============================
+-- ======== Public API ========
+-- ============================
+
+--[[
+	Bind's a viewmodel to a specified object.
+
+	@param object Instance -- The object you want to bind the viewmodel to.
+	@param viewmodelName string -- The name of the viewmodel you want binded.
+	@return ()
+]]
+function ViewmodelClass:BindViewmodel(object: Instance, viewmodelName: string): ()
+	if self._viewmodel then -- If the viewmodel is already binded return.
 		warn("[ViewmodelClass] - A viewmodel is already binded.")
 		return
 	end
 
-	if typeof(object) ~= "Instance" then
+	if typeof(object) ~= "Instance" then -- Check if the types match.
 		warn(string.format("[ViewmodelClass] - Type of object %q is not a valid type.", tostring(typeof(object))))
 		return
 	end
@@ -53,22 +61,67 @@ function ViewmodelClass:bindViewmodel(object: Instance, viewmodelName: string)
 		return
 	end
 
-	local pathToViewmodel: Model = game.ReplicatedStorage.Shared.Viewmodels[viewmodelName]
+	local pathToViewmodel: Model = game.ReplicatedStorage.Shared.Viewmodels[viewmodelName] -- Searches for the viewmodel
 
-	if pathToViewmodel then
+	if pathToViewmodel then -- If it exists continue.
 		self._viewmodel = pathToViewmodel:Clone()
 		self._viewmodel.Parent = workspace
 
 		self._viewmodelFunc = RunService.RenderStepped:Connect(function(a0: number)
 			self._viewmodel.PrimaryPart.CFrame = object.CFrame
 		end)
-	else
+	else -- If not throw a warning.
 		warn(string.format("[ViewmodelClass] - No viewmodel exists with the name %q", tostring(viewmodelName)))
 	end
 end
 
-function ViewmodelClass:unbindViewmodel()
-	self._viewmodelFunc:Disconnect()
+function ViewmodelClass:PlayViewmodelAnimation(animId: string, animName: string, ...: boolean)
+	if typeof(animId) ~= "string" then -- Some type checking.
+		warn(string.format("[ViewmodelClass] - Typeof animId %q is not a valid type.", tostring(typeof(animId))))
+		return
+	end
+
+	if typeof(animName) ~= "string" then
+		warn(string.format("[ViewmodelClass] - Typeof animName %q is not a valid type.", tostring(typeof(animName))))
+		return
+	end
+
+	if not self:_isBinded() then
+		warn("[ViewmodelClass] - No viewmodel is binded cannot play animation.")
+		return
+	end
+
+	local viewmodelHum = self._viewmodel.Humanoid
+	local animator: Animator = viewmodelHum.Animator -- Access the humanoid and animator.
+
+	local newAnimation = Instance.new("Animation") -- Creates a new animation.
+	newAnimation.AnimationId = animId
+
+	local animTrack = animator:LoadAnimation(newAnimation) -- Creates a new track and play's it.
+	animTrack.Looped = ... or false
+	animTrack:Play()
+
+	animTrack.Ended:Connect(function() -- Once completed fire the AnimationEnded signal.
+		self.AnimationEnded:Fire(animName)
+	end)
+
+	print("[ViewmodelClass] - Sucessfully played animation.")
+
+	self._maid:GiveTask(newAnimation, animTrack) -- Add's to the maid for cleanup later.
+end
+
+--[[
+	Unbinds the viewmodel from the object.
+
+	@return ()
+]]
+function ViewmodelClass:UnbindViewmodel(): ()
+	if not self._viewmodel or not self._viewmodelFunc then
+		warn("[ViewmodelClass] - No viewmodel object or function exists.")
+		return
+	end
+
+	self._viewmodelFunc:Disconnect() -- Destroys and cleans up the model/func
 	self._viewmodelFunc = nil
 	self._viewmodel:Destroy()
 	self._viewmodel = nil
@@ -77,5 +130,21 @@ end
 -- ========================
 -- ====== Private API =====
 -- ========================
+
+--[[
+	Returns whether the model is binded or not.
+]]
+function ViewmodelClass:_isBinded()
+	if self._viewmodel then
+		return true
+	else
+		return false
+	end
+end
+
+function ViewmodelClass:Destroy()
+	self._maid:DoCleaning()
+	print("[ViewmodelClass] - Sucessfully destroyed ViewmodelClass.")
+end
 
 return ViewmodelClass
