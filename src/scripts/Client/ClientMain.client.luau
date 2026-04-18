@@ -8,10 +8,8 @@ local serviceBag = require("ServiceBag").new()
 local LocalPlayer = game:GetService("Players").LocalPlayer
 
 -- Packages
-local BaseCombatClass = serviceBag:GetService(require("BaseCombatClass"))
+local BaseCombatClass = serviceBag:GetService(require("BaseCombat"))
 
 serviceBag:GetService(require("ReadyOrNotRobloxServiceClient"))
 serviceBag:Init()
 serviceBag:Start()
-
-BaseCombatClass.new(LocalPlayer)
