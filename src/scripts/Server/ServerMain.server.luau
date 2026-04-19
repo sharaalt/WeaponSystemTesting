@@ -9,21 +9,9 @@ local require = require(loader).bootstrapGame(ServerScriptService.ReadyOrNotRobl
 
 local serviceBag = require("ServiceBag").new()
 
-local PathfindingService = serviceBag:GetService(require("PathfindingService"))
-local BaseEnemyController = serviceBag:GetService(require("BaseEnemyController"))
-
 serviceBag:GetService(require("ReadyOrNotRobloxService"))
 serviceBag:Init()
 serviceBag:Start()
-
-PathfindingService:CreateWaypoints()
-
-for i, v in pairs(workspace:GetChildren()) do
-	if v:HasTag("Enemy") or v:HasTag("enemy") and v:IsA("Model") then
-		print(v)
-		BaseEnemyController.new(v, PathfindingService)
-	end
-end
 
 local fastCast = require(game.ReplicatedStorage.Dependencies.fastcastredux)
 local partCache =
