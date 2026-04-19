@@ -166,14 +166,12 @@ function BaseCombatService:_mainLoop(): ()
 		end
 
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then -- Shooting functionality is handled here.
-			if not weaponData then
+			if not weaponData or not binded then
 				return
 			end
 
 			local idleAnimation: AnimationTrack = self._StateManagerClass:GetStateData(self._Player, "IdleAnimation")
 			local fireMode = weaponData.WeaponData.FireMode
-
-			idleAnimation:Stop()
 
 			if fireMode == 1 then
 				if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
@@ -184,10 +182,17 @@ function BaseCombatService:_mainLoop(): ()
 						return
 					end
 
+					idleAnimation:Stop()
+
+					local viewmodelObject: Model = self._ViewmodelClass:_returnViewmodel()
+					local attachment: Attachment = viewmodelObject[weaponData.WeaponName].Barrel.Attachment
+					local origin: Attachment = attachment.WorldPosition
+
 					weaponData.WeaponData.Ammo = math.clamp(ammo - 1, 0, weaponData.WeaponData.MaxAmmo)
 
 					self._StateManagerClass:SetState(self._Player, "Firing", true) -- Plays the animation and lock's out other states.
 					self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Shooting, "Firing")
+					RemoteEvents.OnWeaponFireRequest:FireServer(weaponData.WeaponData, origin, self:_GetMousePos())
 
 					local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
 						self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
@@ -204,6 +209,8 @@ function BaseCombatService:_mainLoop(): ()
 				if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player, "Firing")) then
 					self._StateManagerClass:SetState(self._Player, "HoldingMb1", true)
 
+					idleAnimation:Stop()
+
 					local loopFunc = task.spawn(function()
 						while true do
 							task.wait(weaponData.WeaponData.FireRate)
@@ -218,9 +225,19 @@ function BaseCombatService:_mainLoop(): ()
 								break
 							end
 
+							local viewmodelObject: Model = self._ViewmodelClass:_returnViewmodel()
+							local attachment: Attachment = viewmodelObject[weaponData.WeaponName].Barrel.Attachment
+							local origin: Attachment = attachment.WorldPosition
+
 							weaponData.WeaponData.Ammo = math.clamp(ammo - 1, 0, weaponData.WeaponData.MaxAmmo) -- Updates the weapons ammo.
 
 							self._StateManagerClass:SetState(self._Player, "Firing", true) -- Plays the animation and lock's out other states.
+							RemoteEvents.OnWeaponFireRequest:FireServer(
+								weaponData.WeaponData,
+								origin,
+								self:_GetMousePos()
+							)
+
 							self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Shooting, "Firing")
 
 							local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
@@ -293,6 +310,17 @@ function BaseCombatService:_mainLoop(): ()
 			end
 		end
 	end)
+end
+
+--[[
+	Get's the player's mouse position.
+
+	@retuen Vector3
+]]
+function BaseCombatService:_GetMousePos(): Vector3
+	local Mouse: Mouse = self._Player:GetMouse()
+
+	return Mouse.Hit.Position
 end
 
 --[[

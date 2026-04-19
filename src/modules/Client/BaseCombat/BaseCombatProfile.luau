@@ -18,8 +18,6 @@ function BaseCombatProfile.CreateWeaponDataTable(weaponData: {}): Types.WeaponDa
 		},
 	}
 
-	print(newTable)
-
 	return newTable
 end
 

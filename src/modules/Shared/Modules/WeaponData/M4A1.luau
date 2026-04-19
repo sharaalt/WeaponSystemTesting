@@ -28,7 +28,7 @@ local M4A1 = {
 		Idle = "rbxassetid://107832596680731",
 	},
 
-	Velocity = 500,
+	Velocity = 350,
 	FireRate = 0.1,
 	MaxAmmo = 25,
 	Damage = 10,

@@ -52,32 +52,26 @@ local function onLengthChanged(cast, lastPoint, direction, length, velocity, bul
 	end
 end
 
-local function rayHit(cast, result, velocity, bullet)
-	if result.Instance.Parent:FindFirstChild("Humanoid") then
-		local hitPart = result.Instance
+local function rayHit(_cast, result, _velocity, bullet)
+	local hitPart = result.Instance
+	local character = hitPart:FindFirstAncestorOfClass("Model")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 
-		local character = hitPart.Parent
-		local humanoid = character:FindFirstChildOfClass("Humanoid")
-
-		if humanoid then
-			local isHeadshot = (hitPart.Name == "Head")
-
-			if isHeadshot then
-				humanoid:TakeDamage(data.HeadshotDamage)
-			else
-				humanoid:TakeDamage(data.Damage)
-			end
-		end
+	if humanoid and humanoid.Health > 0 then
+		local damage = (hitPart.Name == "Head") and data.HeadshotDamage or data.Damage
+		humanoid:TakeDamage(damage)
+		print(humanoid.Health)
 	end
 
 	game:GetService("Debris"):AddItem(bullet, 1)
 end
 
-RemoteEvents.OnWeaponFireRequest.OnServerEvent:Connect(function(player, d, origin, mouse)
+RemoteEvents.OnWeaponFireRequest.OnServerEvent:Connect(function(_player, newData, origin, mouse)
 	local direction = (mouse - origin)
-	data = d
+	print(newData)
+	data = newData
 
-	cast:Fire(origin, direction, 150, castBehaviour)
+	cast:Fire(origin, direction, newData.Velocity, castBehaviour)
 
 	print("[ServerServiceMain] - Client bullet fire request.")
 end)

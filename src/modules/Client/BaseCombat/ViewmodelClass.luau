@@ -135,9 +135,59 @@ function ViewmodelClass:UnbindViewmodel(): ()
 	self._viewmodel = nil
 end
 
+--[[
+	Aim's down sights instead of regularly holding the weapon.
+
+	@return ()
+]]
+function ViewmodelClass:AimdownWeapon(): () end
+
 -- ========================
 -- ====== Private API =====
 -- ========================
+--[[
+	Returns the viewmodel object for other purposes.
+
+	@return Model
+]]
+function ViewmodelClass:_returnViewmodel(): Model
+	if self._viewmodel then
+		return self._viewmodel
+	else
+		warn("[ViewmodelClass] - Viewmodel is not binded or does not exist.")
+		return nil
+	end
+end
+
+--[[
+	Unbinds the viewmodel function only.
+
+	@return ()
+]]
+function ViewmodelClass:_unbindFunction(): ()
+	if not self._viewmodelFunc then
+		warn("[ViewmodelClass] - No viewmodel function exists.")
+		return
+	end
+
+	self._viewmodelFunc:Disconnect() -- Destroys and cleans up the model/func
+	self._viewmodelFunc = nil
+end
+
+--[[
+	Unbinds the viewmodel only.
+
+	@return ()
+]]
+function ViewmodelClass:_unbindModel(): ()
+	if not self._viewmodel then
+		warn("[ViewmodelClass] - No viewmodel function exists.")
+		return
+	end
+
+	self._viewmodel:Destroy()
+	self._viewmodel = nil
+end
 
 --[[
 	Returns whether the model is binded or not.
