@@ -81,7 +81,7 @@ function ViewmodelClass:PlayViewmodelAnimation(animId: string, animName: string,
 		return
 	end
 
-	if typeof(animName) ~= "string" then
+	if animName and typeof(animName) ~= "string" then
 		warn(string.format("[ViewmodelClass] - Typeof animName %q is not a valid type.", tostring(typeof(animName))))
 		return
 	end
@@ -104,7 +104,9 @@ function ViewmodelClass:PlayViewmodelAnimation(animId: string, animName: string,
 	self.AnimationPlayed:Fire(animName)
 
 	local connection = animTrack.Ended:Connect(function() -- Once completed fire the AnimationEnded signal.
-		self.AnimationEnded:Fire(animName)
+		if animName ~= "" or nil then
+			self.AnimationEnded:Fire(animName)
+		end
 	end)
 
 	print("[ViewmodelClass] - Sucessfully played animation.")

@@ -88,6 +88,7 @@ function BaseCombatService:_mainLoop(): ()
 						self._StateManagerClass:SetState(self._Player, animName, false)
 						self._StateManagerClass:RemoteStateTable(self._Player)
 						self._ViewmodelClass:UnbindViewmodel()
+						self._StateManagerClass:SetState(self._Player, "IdleAnimation", nil)
 						weaponData = nil
 					end)
 
@@ -105,8 +106,11 @@ function BaseCombatService:_mainLoop(): ()
 					self._ViewmodelClass:BindViewmodel(camera, weaponData.WeaponName)
 					self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Equip, "Equipping")
 
+					local Animation = self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Idle, "", true)
+
 					local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
 						self._StateManagerClass:SetState(self._Player, animName, false)
+						self._StateManagerClass:SetState(self._Player, "IdleAnimation", Animation)
 					end)
 
 					self._maid:GiveTask(connection)
@@ -117,27 +121,41 @@ function BaseCombatService:_mainLoop(): ()
 		if input.KeyCode == Enum.KeyCode.R then -- Reloading functionality is handled here.
 			if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
 				local ammo = weaponData.WeaponData.Ammo
+				local idleAnimation: AnimationTrack =
+					self._StateManagerClass:GetStateData(self._Player, "IdleAnimation")
 
 				if ammo == weaponData.WeaponData.MaxAmmo then
 					warn("[BaseCombatService] - Magazine is already full no need to reload!")
 					return
 				end
 
+				idleAnimation:Stop()
+
 				if ammo > 0 then
 					self._StateManagerClass:SetState(self._Player, "Reloading", true) -- Plays the animation and lock's out other states.
 					self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.ReloadWithAmmo, "Reloading")
 
 					local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
+						if animName ~= "Reloading" then
+							return
+						end
+
 						self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
 						weaponData.WeaponData.Ammo = weaponData.WeaponData.MaxAmmo
+						idleAnimation:Play()
 					end)
 				else
 					self._StateManagerClass:SetState(self._Player, "Reloading", true) -- Plays the animation and lock's out other states.
 					self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.ReloadWithNoAmmo, "Reloading")
 
 					local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
+						if animName ~= "Reloading" then
+							return
+						end
+
 						self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
 						weaponData.WeaponData.Ammo = weaponData.WeaponData.MaxAmmo
+						idleAnimation:Play()
 					end)
 				end
 			end
@@ -148,7 +166,10 @@ function BaseCombatService:_mainLoop(): ()
 				return
 			end
 
+			local idleAnimation: AnimationTrack = self._StateManagerClass:GetStateData(self._Player, "IdleAnimation")
 			local fireMode = weaponData.WeaponData.FireMode
+
+			idleAnimation:Stop()
 
 			if fireMode == 1 then
 				if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
@@ -166,6 +187,7 @@ function BaseCombatService:_mainLoop(): ()
 
 					local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
 						self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
+						idleAnimation:Play()
 					end)
 
 					return
@@ -197,6 +219,7 @@ function BaseCombatService:_mainLoop(): ()
 
 							local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
 								self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
+								idleAnimation:Play()
 							end)
 						end
 					end)
@@ -208,12 +231,18 @@ function BaseCombatService:_mainLoop(): ()
 
 		if input.KeyCode == Enum.KeyCode.F then -- Inspection functionality is handled here.
 			if binded and not self._StateManagerClass:GetStateData() then
+				local idleAnimation: AnimationTrack =
+					self._StateManagerClass:GetStateData(self._Player, "IdleAnimation")
+
+				idleAnimation:Stop()
+
 				self._StateManagerClass:SetState(self._Player, "Inspecting", true)
 				self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Inspect, "Inspecting")
 
 				local connection = self._ViewmodelClass.AnimationEnded:Once(
 					function(animName) -- Once completed unlock other states/functions.
 						self._StateManagerClass:SetState(self._Player, animName, false)
+						idleAnimation:Play()
 					end
 				)
 
@@ -223,6 +252,11 @@ function BaseCombatService:_mainLoop(): ()
 
 		if input.KeyCode == Enum.KeyCode.V then -- Firing mode functionality is handled here.
 			if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
+				local idleAnimation: AnimationTrack =
+					self._StateManagerClass:GetStateData(self._Player, "IdleAnimation")
+
+				idleAnimation:Stop()
+
 				self._StateManagerClass:SetState(self._Player, "FireMode", true) -- Plays the animation and lock's out other states.
 				self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.FireSelector, "FireMode")
 
@@ -234,6 +268,8 @@ function BaseCombatService:_mainLoop(): ()
 						else
 							weaponData.WeaponData.FireMode = 1
 						end
+
+						idleAnimation:Play()
 					end
 				)
 
