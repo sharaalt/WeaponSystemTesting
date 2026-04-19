@@ -101,13 +101,19 @@ function ViewmodelClass:PlayViewmodelAnimation(animId: string, animName: string,
 	animTrack.Looped = ... or false
 	animTrack:Play()
 
-	animTrack.Ended:Connect(function() -- Once completed fire the AnimationEnded signal.
+	self.AnimationPlayed:Fire(animName)
+
+	local connection = animTrack.Ended:Connect(function() -- Once completed fire the AnimationEnded signal.
 		self.AnimationEnded:Fire(animName)
 	end)
 
 	print("[ViewmodelClass] - Sucessfully played animation.")
 
-	self._maid:GiveTask(newAnimation, animTrack) -- Add's to the maid for cleanup later.
+	self._maid:GiveTask(newAnimation, animTrack, connection) -- Add's to the maid for cleanup later.
+
+	if ... then
+		return animTrack -- Hands off to BaseCombatService for handling.
+	end
 end
 
 --[[
@@ -133,8 +139,10 @@ end
 
 --[[
 	Returns whether the model is binded or not.
+
+	@return boolean	
 ]]
-function ViewmodelClass:_isBinded()
+function ViewmodelClass:_isBinded(): ()
 	if self._viewmodel then
 		return true
 	else

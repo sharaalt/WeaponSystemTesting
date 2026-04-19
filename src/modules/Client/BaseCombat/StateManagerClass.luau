@@ -21,6 +21,11 @@ function StateManagerClass.new()
 	-- Services
 	self._maid = Maid.new()
 
+	-- Signals
+	self.StateChange = Signal.new()
+	self.StateTableCreated = Signal.new()
+	self.StateTableRemoved = Signal.new()
+
 	return self
 end
 
@@ -51,6 +56,8 @@ function StateManagerClass:CreateStateTable(states, Player: Player): ()
 
 	local newStateTable = StateManagerProfile.CreateStateTable(states, Player)
 	self._stateCache[Player.UserId] = newStateTable -- Creates a new table and binds it to the stateCache under the players name.
+
+	self.StateTableCreated:Fire(Player, newStateTable)
 
 	print( -- Prints out success for confirmation.
 		string.format(
@@ -98,6 +105,8 @@ function StateManagerClass:SetState(Player: Player, StateName: string, Data: any
 	end
 
 	playerStates.states[StateName] = Data
+
+	self.StateChange:Fire(Player, StateName, Data)
 
 	print(string.format("[StateManagerClass] - Sucessfully set %q to %q", StateName, tostring(Data)))
 end
@@ -188,6 +197,9 @@ function StateManagerClass:RemoteStateTable(Player: Player): ()
 				Player.UserId
 			)
 		)
+
+		self.StateTableRemoved:Fire(Player)
+
 		return
 	else -- If not throw an warning.
 		warn(

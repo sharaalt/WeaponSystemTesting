@@ -41,6 +41,10 @@ function M4A1.ReturnData()
 	return M4A1
 end
 
+function M4A1.ReturnTable(name)
+	return M4A1[name]
+end
+
 function M4A1.ReturnSoundData(name)
 	return M4A1.SoundData[name]
 end

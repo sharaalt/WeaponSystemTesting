@@ -7,6 +7,7 @@ local BaseCombatConstanants = {
 		Firing = false,
 		Inspecting = false,
 		FireMode = false,
+		HoldingMb1 = false,
 	},
 }
 

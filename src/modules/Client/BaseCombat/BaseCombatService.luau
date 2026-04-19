@@ -1,7 +1,9 @@
 -- External Services
+local Types = require(script.Parent.Types)
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local BaseCombatConstants = require(script.Parent.Parent.Parent.Shared.BaseCombatConstanants)
+local BaseCombatProfile = require(script.Parent.BaseCombatProfile)
 local StateManagerClass = require(script.Parent.StateManagerClass)
 local ViewmodelClass = require(script.Parent.ViewmodelClass)
 
@@ -30,6 +32,9 @@ function BaseCombatService:Init(serviceBag)
 	self._StateManagerClass = StateManagerClass.new()
 
 	-- Signals
+	self.WeaponFired = Signal.new()
+	self.WeaponEquipped = Signal.new()
+	self.WeaponUnequipped = Signal.new()
 
 	self._maid:GiveTask(task.spawn(function()
 		self:_mainLoop()
@@ -59,7 +64,7 @@ function BaseCombatService:_mainLoop(): ()
 		[Enum.KeyCode.Nine] = 9,
 		[Enum.KeyCode.Zero] = 0,
 	}
-	local weaponData = nil
+	local weaponData: Types.WeaponData = nil
 
 	UserInputService.InputBegan:Connect(function(input: InputObject)
 		local number = nums[input.KeyCode]
@@ -67,7 +72,6 @@ function BaseCombatService:_mainLoop(): ()
 
 		if number then -- Checks if the keycode is a valid number.
 			if self._Weapons[number] then -- Checks if that number is cached in the weapons table.
-				weaponData = self._Weapons[number]
 				local camera = workspace.CurrentCamera
 
 				if binded then -- If the viewmodel is binded unbind it.
@@ -84,6 +88,7 @@ function BaseCombatService:_mainLoop(): ()
 						self._StateManagerClass:SetState(self._Player, animName, false)
 						self._StateManagerClass:RemoteStateTable(self._Player)
 						self._ViewmodelClass:UnbindViewmodel()
+						weaponData = nil
 					end)
 
 					self._maid:GiveTask(connection)
@@ -95,6 +100,7 @@ function BaseCombatService:_mainLoop(): ()
 						return
 					end
 
+					weaponData = self._Weapons[number]
 					self._StateManagerClass:SetState(self._Player, "Equipping", true) -- Unlocks unequipping/other functions.
 					self._ViewmodelClass:BindViewmodel(camera, weaponData.WeaponName)
 					self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Equip, "Equipping")
@@ -110,17 +116,93 @@ function BaseCombatService:_mainLoop(): ()
 
 		if input.KeyCode == Enum.KeyCode.R then -- Reloading functionality is handled here.
 			if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
+				local ammo = weaponData.WeaponData.Ammo
+
+				if ammo == weaponData.WeaponData.MaxAmmo then
+					warn("[BaseCombatService] - Magazine is already full no need to reload!")
+					return
+				end
+
+				if ammo > 0 then
+					self._StateManagerClass:SetState(self._Player, "Reloading", true) -- Plays the animation and lock's out other states.
+					self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.ReloadWithAmmo, "Reloading")
+
+					local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
+						self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
+						weaponData.WeaponData.Ammo = weaponData.WeaponData.MaxAmmo
+					end)
+				else
+					self._StateManagerClass:SetState(self._Player, "Reloading", true) -- Plays the animation and lock's out other states.
+					self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.ReloadWithNoAmmo, "Reloading")
+
+					local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
+						self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
+						weaponData.WeaponData.Ammo = weaponData.WeaponData.MaxAmmo
+					end)
+				end
 			end
 		end
 
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then -- Shooting functionality is handled here.
-			if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player), "Firing") then
-				self._StateManagerClass:SetState(self._Player, "Firing", true) -- Plays the animation and lock's out other states.
-				self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Shooting, "Firing")
+			if not weaponData then
+				return
+			end
 
-				local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
-					self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
-				end)
+			local fireMode = weaponData.WeaponData.FireMode
+
+			if fireMode == 1 then
+				if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
+					local ammo = weaponData.WeaponData.Ammo
+
+					if ammo <= 0 then
+						warn("[BaseCombatService] - Cannot shoot on an empty magazine.")
+						return
+					end
+
+					weaponData.WeaponData.Ammo = math.clamp(ammo - 1, 0, weaponData.WeaponData.MaxAmmo)
+
+					self._StateManagerClass:SetState(self._Player, "Firing", true) -- Plays the animation and lock's out other states.
+					self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Shooting, "Firing")
+
+					local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
+						self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
+					end)
+
+					return
+				end
+			end
+
+			if fireMode == 2 then
+				if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player, "Firing")) then
+					self._StateManagerClass:SetState(self._Player, "HoldingMb1", true)
+
+					local loopFunc = task.spawn(function()
+						while true do
+							task.wait(weaponData.WeaponData.FireRate)
+							local ammo = weaponData.WeaponData.Ammo
+
+							if ammo <= 0 then
+								warn("[BaseCombatService] - Cannot shoot on an empty magazine.")
+								return
+							end
+
+							if self._StateManagerClass:GetStateData(self._Player, "HoldingMb1") == false then
+								break
+							end
+
+							weaponData.WeaponData.Ammo = math.clamp(ammo - 1, 0, weaponData.WeaponData.MaxAmmo)
+
+							self._StateManagerClass:SetState(self._Player, "Firing", true) -- Plays the animation and lock's out other states.
+							self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Shooting, "Firing")
+
+							local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
+								self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
+							end)
+						end
+					end)
+
+					self._maid:GiveTask(loopFunc)
+				end
 			end
 		end
 
@@ -147,6 +229,11 @@ function BaseCombatService:_mainLoop(): ()
 				local connection = self._ViewmodelClass.AnimationEnded:Once(
 					function(animName) -- Once completed unlock other states/functions.
 						self._StateManagerClass:SetState(self._Player, animName, false)
+						if weaponData.WeaponData.FireMode == 1 then
+							weaponData.WeaponData.FireMode = 2
+						else
+							weaponData.WeaponData.FireMode = 1
+						end
 					end
 				)
 
@@ -156,7 +243,11 @@ function BaseCombatService:_mainLoop(): ()
 	end)
 
 	UserInputService.InputEnded:Connect(function(input: InputObject)
-		local number = nums[input.KeyCode]
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if weaponData and self._StateManagerClass:GetStateData(self._Player, "HoldingMb1") then
+				self._StateManagerClass:SetState(self._Player, "HoldingMb1", false)
+			end
+		end
 	end)
 end
 
@@ -186,7 +277,7 @@ function BaseCombatService:_SortTools(): {}
 
 					if data then -- If we found there data return it.
 						print(string.format("[BaseCombatService] - Found weapon data %q", v.Name))
-						self._Weapons[i] = data.ReturnData()
+						self._Weapons[i] = BaseCombatProfile.CreateWeaponDataTable(data.ReturnData())
 						count += 1
 					else
 						print(string.format("[BaseCombatService] - No weapon data found for %q", v.Name))
