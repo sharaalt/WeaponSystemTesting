@@ -4,7 +4,7 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local BaseCombatConstants = require(script.Parent.Parent.Parent.Shared.BaseCombatConstanants)
 local BaseCombatProfile = require(script.Parent.BaseCombatProfile)
-local StateManagerClass = require(script.Parent.StateManagerClass)
+local StateManagerClass = require(script.Parent.Parent.StateManager.StateManagerClass)
 local ViewmodelClass = require(script.Parent.ViewmodelClass)
 
 local loader = require(script.Parent.Parent.loader)
@@ -88,7 +88,6 @@ function BaseCombatService:_mainLoop(): ()
 						self._StateManagerClass:SetState(self._Player, animName, false)
 						self._StateManagerClass:RemoteStateTable(self._Player)
 						self._ViewmodelClass:UnbindViewmodel()
-						self._StateManagerClass:SetState(self._Player, "IdleAnimation", nil)
 						weaponData = nil
 					end)
 
@@ -106,10 +105,10 @@ function BaseCombatService:_mainLoop(): ()
 					self._ViewmodelClass:BindViewmodel(camera, weaponData.WeaponName)
 					self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Equip, "Equipping")
 
-					local Animation = self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Idle, "", true)
-
 					local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
 						self._StateManagerClass:SetState(self._Player, animName, false)
+						local Animation =
+							self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Idle, "", true)
 						self._StateManagerClass:SetState(self._Player, "IdleAnimation", Animation)
 					end)
 
@@ -144,6 +143,8 @@ function BaseCombatService:_mainLoop(): ()
 						weaponData.WeaponData.Ammo = weaponData.WeaponData.MaxAmmo
 						idleAnimation:Play()
 					end)
+
+					self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
 				else
 					self._StateManagerClass:SetState(self._Player, "Reloading", true) -- Plays the animation and lock's out other states.
 					self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.ReloadWithNoAmmo, "Reloading")
@@ -157,6 +158,8 @@ function BaseCombatService:_mainLoop(): ()
 						weaponData.WeaponData.Ammo = weaponData.WeaponData.MaxAmmo
 						idleAnimation:Play()
 					end)
+
+					self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
 				end
 			end
 		end
@@ -190,6 +193,8 @@ function BaseCombatService:_mainLoop(): ()
 						idleAnimation:Play()
 					end)
 
+					self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
+
 					return
 				end
 			end
@@ -221,6 +226,8 @@ function BaseCombatService:_mainLoop(): ()
 								self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
 								idleAnimation:Play()
 							end)
+
+							self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
 						end
 					end)
 
