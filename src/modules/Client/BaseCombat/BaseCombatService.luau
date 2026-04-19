@@ -2,6 +2,7 @@
 local Types = require(script.Parent.Types)
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local RemoteEvents = game.ReplicatedStorage.Shared.RemoteEvents
 local BaseCombatConstants = require(script.Parent.Parent.Parent.Shared.BaseCombatConstanants)
 local BaseCombatProfile = require(script.Parent.BaseCombatProfile)
 local StateManagerClass = require(script.Parent.Parent.StateManager.StateManagerClass)
@@ -208,16 +209,16 @@ function BaseCombatService:_mainLoop(): ()
 							task.wait(weaponData.WeaponData.FireRate)
 							local ammo = weaponData.WeaponData.Ammo
 
-							if ammo <= 0 then
+							if ammo <= 0 then -- Simple ammo check.
 								warn("[BaseCombatService] - Cannot shoot on an empty magazine.")
 								return
 							end
 
-							if self._StateManagerClass:GetStateData(self._Player, "HoldingMb1") == false then
+							if self._StateManagerClass:GetStateData(self._Player, "HoldingMb1") == false then -- Break's off the loop if we are not holding MB1
 								break
 							end
 
-							weaponData.WeaponData.Ammo = math.clamp(ammo - 1, 0, weaponData.WeaponData.MaxAmmo)
+							weaponData.WeaponData.Ammo = math.clamp(ammo - 1, 0, weaponData.WeaponData.MaxAmmo) -- Updates the weapons ammo.
 
 							self._StateManagerClass:SetState(self._Player, "Firing", true) -- Plays the animation and lock's out other states.
 							self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Shooting, "Firing")
