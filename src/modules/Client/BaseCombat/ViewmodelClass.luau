@@ -141,7 +141,27 @@ end
 
 	@return ()
 ]]
-function ViewmodelClass:AimdownWeapon(): () end
+function ViewmodelClass:AimdownWeapon(weaponName: string): ()
+	if typeof(weaponName) ~= "string" then
+		warn(
+			string.format("[ViewmodelClass] - Type of weaponName %q is not a valid type.", tostring(typeof(weaponName)))
+		)
+		return
+	end
+
+	if not self._viewmodelFunc then
+		warn("[ViewmodelClass] - There is no binded viewmodel function.")
+		return
+	end
+
+	self:_unbindFunction()
+
+	self._viewmodelFunc = RunService.RenderStepped:Connect(function(a0: number)
+		local AimPart: Part = self._viewmodel[weaponName].AimPart
+		AimPart.CFrame = workspace.CurrentCamera.CFrame
+		AimPart.Orientation = Vector3.new(0, 0, 0)
+	end)
+end
 
 -- ========================
 -- ====== Private API =====
@@ -152,7 +172,7 @@ function ViewmodelClass:AimdownWeapon(): () end
 	@return nil
 ]]
 function ViewmodelClass:_attachTextures(Player: Player): ()
-	if typeof(Player) ~= "Instance" then
+	if typeof(Player) ~= "Instance" then -- Make's sure that a viewmodel is actually binded.
 		warn(string.format("[ViewmodelClass] - Type of player %q is not a valid type.", typeof(Player)))
 		return
 	end
@@ -165,28 +185,27 @@ function ViewmodelClass:_attachTextures(Player: Player): ()
 	end
 
 	local character = Player.Character or Player.CharacterAdded:Wait()
-	local leftArm = character:WaitForChild("Left Arm")
+	local leftArm = character:WaitForChild("Left Arm") -- Get's the left and right arm colour.
 	local rightArm = character:WaitForChild("Right Arm")
 
-	viewmodel.LeftArm.BrickColor = leftArm.BrickColor
+	viewmodel.LeftArm.BrickColor = leftArm.BrickColor -- Applies to the viewmodel.
 	viewmodel.RightArm.BrickColor = rightArm.BrickColor
 
-	local shirt = character:FindFirstChildOfClass("Shirt")
+	-- local shirt = character:FindFirstChildOfClass("Shirt")
 
-	if shirt then
-		local function applyMesh(armPart: MeshPart, meshId)
-			local mesh = armPart:FindFirstChildOfClass("SpecialMesh") or Instance.new("SpecialMesh", armPart)
-			mesh.Parent = armPart
-			mesh.MeshType = Enum.MeshType.FileMesh
-			mesh.MeshId = meshId
-			mesh.TextureId = shirt.ShirtTemplate -- This correctly uses the shirt
-		end
+	-- if shirt then
+	-- 	local function applyMesh(armPart: MeshPart, meshId)
+	-- 		local mesh = armPart:FindFirstChildOfClass("SpecialMesh") or Instance.new("SpecialMesh", armPart)
+	-- 		mesh.Parent = armPart
+	-- 		mesh.MeshType = Enum.MeshType.FileMesh
+	-- 		mesh.MeshId = meshId
+	-- 		mesh.TextureId = shirt.ShirtTemplate -- This correctly uses the shirt
+	-- 	end
 
-		applyMesh(viewmodel.LeftArm, "rbxassetid://12123334")
-		applyMesh(viewmodel.RightArm, "rbxassetid://12123350")
-		return
-	else
-	end
+	-- 	applyMesh(viewmodel.LeftArm, "rbxassetid://12123334")
+	-- 	applyMesh(viewmodel.RightArm, "rbxassetid://12123350")
+	-- 	return
+	-- end
 end
 
 --[[

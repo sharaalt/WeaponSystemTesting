@@ -304,6 +304,14 @@ function BaseCombatService:_mainLoop(): ()
 			self._StateManagerClass:SetState(self._Player, "HoldingMb1", false)
 		end
 	end))
+
+	self._maid:GiveTask(self._BaseCombatInput.WeaponAim:Connect(function()
+		local binded = self._ViewmodelClass:_isBinded()
+
+		if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
+			self._ViewmodelClass:AimdownWeapon("M4A1")
+		end
+	end))
 end
 
 --[[

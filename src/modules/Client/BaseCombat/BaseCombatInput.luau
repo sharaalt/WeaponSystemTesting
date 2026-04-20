@@ -26,6 +26,7 @@ function BaseCombatInput.new()
 	self.WeaponFiremodeChanged = Signal.new()
 	self.WeaponFired = Signal.new()
 	self.WeaponFiredEnded = Signal.new()
+	self.WeaponAim = Signal.new()
 
 	self:InputLoop()
 
@@ -65,6 +66,8 @@ function BaseCombatInput:InputLoop(): ()
 			self.WeaponFiremodeChanged:Fire()
 		elseif Input.UserInputType == Enum.UserInputType.MouseButton1 then
 			self.WeaponFired:Fire()
+		elseif Input.UserInputType == Enum.UserInputType.MouseButton2 then
+			self.WeaponAim:Fire()
 		end
 	end)
 
