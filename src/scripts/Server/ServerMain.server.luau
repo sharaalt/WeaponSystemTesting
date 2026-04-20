@@ -68,7 +68,6 @@ end
 
 RemoteEvents.OnWeaponFireRequest.OnServerEvent:Connect(function(_player, newData, origin, mouse)
 	local direction = (mouse - origin)
-	print(newData)
 	data = newData
 
 	cast:Fire(origin, direction, newData.Velocity, castBehaviour)

@@ -1,16 +1,6 @@
 local M4A1 = {
 	WeaponName = "M4A1",
 
-	SoundData = {
-		FireSound = "rbxassetid://5096003821",
-		ReloadSound = "rbxassetid://104445304303143",
-		FirstTimeEquipSound = "rbxassetid://104445304303143",
-		InspectSound = "rbxassetid://131169866964949",
-		FireSelectorSound = "rbxassetid://111236667677398",
-		SecondEquipGood = "rbxassetid://120440060500004",
-		UnequipSound = "rbxassetid://109520982059397",
-	},
-
 	Animations = {
 		Idle = "rbxassetid://77887609433917",
 		ReloadWithNoAmmo = "rbxassetid://124179811038132",

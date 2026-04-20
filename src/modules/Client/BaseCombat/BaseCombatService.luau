@@ -1,9 +1,9 @@
 -- External Services
 local Types = require(script.Parent.Types)
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local RemoteEvents = game.ReplicatedStorage.Shared.RemoteEvents
 local BaseCombatConstants = require(script.Parent.Parent.Parent.Shared.BaseCombatConstanants)
+local BaseCombatInput = require(script.Parent.BaseCombatInput)
 local BaseCombatProfile = require(script.Parent.BaseCombatProfile)
 local StateManagerClass = require(script.Parent.Parent.StateManager.StateManagerClass)
 local ViewmodelClass = require(script.Parent.ViewmodelClass)
@@ -13,15 +13,13 @@ local require = loader.load(script)
 
 -- Internal Services
 local Maid = require("Maid")
-local Signal = require("Signal")
 
 local BaseCombatService = {}
 BaseCombatService.ServiceName = "BaseCombatService"
 
 function BaseCombatService:Init(serviceBag)
-	assert(not self._serviceBag, "[BaseCombatService] - Service is already initalized!")
-
-	self._serviceBag = assert(serviceBag, "[BaseCombatService] - Service is already initalized!")
+	assert(not self._serviceBag, "[BaseCombatService] - BaseCombatService is already initalized!")
+	self._serviceBag = assert(serviceBag, "[BaseCombatService] - BaseCombatService is already initalized!")
 
 	-- Variables
 	self._Weapons = {}
@@ -31,11 +29,8 @@ function BaseCombatService:Init(serviceBag)
 	self._maid = Maid.new()
 	self._ViewmodelClass = ViewmodelClass.new()
 	self._StateManagerClass = StateManagerClass.new()
-
-	-- Signals
-	self.WeaponFired = Signal.new()
-	self.WeaponEquipped = Signal.new()
-	self.WeaponUnequipped = Signal.new()
+	self._BaseCombatInput = BaseCombatInput.new()
+	self._AudioServiceClient = self._serviceBag:GetService(require("AudioServiceClient"))
 
 	self._maid:GiveTask(task.spawn(function()
 		self:_mainLoop()
@@ -53,263 +48,263 @@ end
 	@return ()
 ]]
 function BaseCombatService:_mainLoop(): ()
-	local nums = { -- Used to check keybinds.
-		[Enum.KeyCode.One] = 1,
-		[Enum.KeyCode.Two] = 2,
-		[Enum.KeyCode.Three] = 3,
-		[Enum.KeyCode.Four] = 4,
-		[Enum.KeyCode.Five] = 5,
-		[Enum.KeyCode.Six] = 6,
-		[Enum.KeyCode.Seven] = 7,
-		[Enum.KeyCode.Eight] = 8,
-		[Enum.KeyCode.Nine] = 9,
-		[Enum.KeyCode.Zero] = 0,
-	}
 	local weaponData: Types.WeaponData = nil
 
-	UserInputService.InputBegan:Connect(function(input: InputObject)
-		local number = nums[input.KeyCode]
+	self._maid:GiveTask(self._BaseCombatInput.WeaponReloading:Connect(function()
 		local binded = self._ViewmodelClass:_isBinded()
+		print(self._StateManagerClass:GetStatesBulk(self._Player))
 
-		if number then -- Checks if the keycode is a valid number.
-			if self._Weapons[number] then -- Checks if that number is cached in the weapons table.
-				local camera = workspace.CurrentCamera
+		if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
+			local ammo = weaponData.WeaponData.Ammo
+			local idleAnimation: AnimationTrack = self._StateManagerClass:GetStateData(self._Player, "IdleAnimation")
 
-				if binded then -- If the viewmodel is binded unbind it.
-					if self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
-						warn("[BaseCombatClass] - A state is true you cannot unequip at this time.")
-						return
-					end
-
-					self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.UnEquip, "UnEquipping")
-
-					self._StateManagerClass:SetState(self._Player, "UnEquipping", true)
-
-					local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
-						self._StateManagerClass:SetState(self._Player, animName, false)
-						self._StateManagerClass:RemoteStateTable(self._Player)
-						self._ViewmodelClass:UnbindViewmodel()
-						weaponData = nil
-					end)
-
-					self._maid:GiveTask(connection)
-				else -- If it's not binded bind it.
-					self._StateManagerClass:CreateStateTable(BaseCombatConstants.GetStates(), self._Player) -- Initalize the state table
-
-					if self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then -- Lock's out unequipping/other functions.
-						warn("[BaseCombatClass] - A state is true you cannot equip at this time.")
-						return
-					end
-
-					weaponData = self._Weapons[number]
-					self._StateManagerClass:SetState(self._Player, "Equipping", true) -- Unlocks unequipping/other functions.
-					self._ViewmodelClass:BindViewmodel(camera, weaponData.WeaponName)
-					self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Equip, "Equipping")
-
-					local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
-						self._StateManagerClass:SetState(self._Player, animName, false)
-						local Animation =
-							self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Idle, "", true)
-						self._StateManagerClass:SetState(self._Player, "IdleAnimation", Animation)
-					end)
-
-					self._maid:GiveTask(connection)
-				end
-			end
-		end
-
-		if input.KeyCode == Enum.KeyCode.R then -- Reloading functionality is handled here.
-			if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
-				local ammo = weaponData.WeaponData.Ammo
-				local idleAnimation: AnimationTrack =
-					self._StateManagerClass:GetStateData(self._Player, "IdleAnimation")
-
-				if ammo == weaponData.WeaponData.MaxAmmo then
-					warn("[BaseCombatService] - Magazine is already full no need to reload!")
-					return
-				end
-
-				idleAnimation:Stop()
-
-				if ammo > 0 then
-					self._StateManagerClass:SetState(self._Player, "Reloading", true) -- Plays the animation and lock's out other states.
-					self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.ReloadWithAmmo, "Reloading")
-
-					local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
-						if animName ~= "Reloading" then
-							return
-						end
-
-						self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
-						weaponData.WeaponData.Ammo = weaponData.WeaponData.MaxAmmo
-						idleAnimation:Play()
-					end)
-
-					self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
-				else
-					self._StateManagerClass:SetState(self._Player, "Reloading", true) -- Plays the animation and lock's out other states.
-					self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.ReloadWithNoAmmo, "Reloading")
-
-					local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
-						if animName ~= "Reloading" then
-							return
-						end
-
-						self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
-						weaponData.WeaponData.Ammo = weaponData.WeaponData.MaxAmmo
-						idleAnimation:Play()
-					end)
-
-					self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
-				end
-			end
-		end
-
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then -- Shooting functionality is handled here.
-			if not weaponData or not binded then
+			if ammo == weaponData.WeaponData.MaxAmmo then
+				warn("[BaseCombatService] - Magazine is already full no need to reload!")
 				return
 			end
 
+			idleAnimation:Stop()
+
+			if ammo > 0 then
+				self._StateManagerClass:SetState(self._Player, "Reloading", true) -- Plays the animation and lock's out other states.
+				self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.ReloadWithAmmo, "Reloading")
+				self._AudioServiceClient:PlayAudio("ReloadSound", false)
+
+				local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
+					self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
+					weaponData.WeaponData.Ammo = weaponData.WeaponData.MaxAmmo
+					idleAnimation:Play()
+				end)
+
+				self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
+			else
+				self._StateManagerClass:SetState(self._Player, "Reloading", true) -- Plays the animation and lock's out other states.
+				self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.ReloadWithNoAmmo, "Reloading")
+				self._AudioServiceClient:PlayAudio("ReloadSound", false)
+
+				local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
+					self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
+					weaponData.WeaponData.Ammo = weaponData.WeaponData.MaxAmmo
+					idleAnimation:Play()
+				end)
+
+				self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
+			end
+		end
+	end))
+
+	self._maid:GiveTask(self._BaseCombatInput.WeaponInspect:Connect(function()
+		local binded = self._ViewmodelClass:_isBinded()
+
+		if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
 			local idleAnimation: AnimationTrack = self._StateManagerClass:GetStateData(self._Player, "IdleAnimation")
-			local fireMode = weaponData.WeaponData.FireMode
 
-			if fireMode == 1 then
-				if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
-					local ammo = weaponData.WeaponData.Ammo
+			idleAnimation:Stop()
 
-					if ammo <= 0 then
-						warn("[BaseCombatService] - Cannot shoot on an empty magazine.")
-						return
-					end
+			print(self._Player)
+			self._StateManagerClass:SetState(self._Player, "Inspecting", true)
 
-					idleAnimation:Stop()
+			self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Inspect, "Inspecting")
+			self._AudioServiceClient:PlayAudio("InspectSound", false)
 
-					local viewmodelObject: Model = self._ViewmodelClass:_returnViewmodel()
-					local attachment: Attachment = viewmodelObject[weaponData.WeaponName].Barrel.Attachment
-					local origin: Attachment = attachment.WorldPosition
+			local connection = self._ViewmodelClass.AnimationEnded:Once(
+				function(animName) -- Once completed unlock other states/functions.
+					self._StateManagerClass:SetState(self._Player, animName, false)
+					idleAnimation:Play()
+				end
+			)
 
-					weaponData.WeaponData.Ammo = math.clamp(ammo - 1, 0, weaponData.WeaponData.MaxAmmo)
+			self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
+		end
+	end))
 
-					self._StateManagerClass:SetState(self._Player, "Firing", true) -- Plays the animation and lock's out other states.
-					self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Shooting, "Firing")
-					RemoteEvents.OnWeaponFireRequest:FireServer(weaponData.WeaponData, origin, self:_GetMousePos())
+	self._maid:GiveTask(self._BaseCombatInput.WeaponEquipped:Connect(function(number)
+		local binded = self._ViewmodelClass:_isBinded()
 
-					local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
-						self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
-						idleAnimation:Play()
-					end)
+		if self._Weapons[number] then -- Checks if that number is cached in the weapons table.
+			local camera = workspace.CurrentCamera
 
-					self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
-
+			if binded then -- If the viewmodel is binded unbind it.
+				if self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
+					warn("[BaseCombatClass] - A state is true you cannot unequip at this time.")
 					return
 				end
-			end
 
-			if fireMode == 2 then
-				if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player, "Firing")) then
-					self._StateManagerClass:SetState(self._Player, "HoldingMb1", true)
+				self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.UnEquip, "UnEquipping")
 
-					idleAnimation:Stop()
+				self._StateManagerClass:SetState(self._Player, "UnEquipping", true)
+				self._AudioServiceClient:PlayAudio("UnequipSound", false)
 
-					local loopFunc = task.spawn(function()
-						while true do
-							task.wait(weaponData.WeaponData.FireRate)
-							local ammo = weaponData.WeaponData.Ammo
+				local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
+					self._StateManagerClass:SetState(self._Player, animName, false)
+					self._StateManagerClass:RemoteStateTable(self._Player)
+					self._ViewmodelClass:UnbindViewmodel()
+					weaponData = nil
+				end)
 
-							if ammo <= 0 then -- Simple ammo check.
-								warn("[BaseCombatService] - Cannot shoot on an empty magazine.")
-								return
-							end
+				self._maid:GiveTask(connection)
+			else -- If it's not binded bind it.
+				self._StateManagerClass:CreateStateTable(BaseCombatConstants.GetStates(), self._Player) -- Initalize the state table
 
-							if self._StateManagerClass:GetStateData(self._Player, "HoldingMb1") == false then -- Break's off the loop if we are not holding MB1
-								break
-							end
-
-							local viewmodelObject: Model = self._ViewmodelClass:_returnViewmodel()
-							local attachment: Attachment = viewmodelObject[weaponData.WeaponName].Barrel.Attachment
-							local origin: Attachment = attachment.WorldPosition
-
-							weaponData.WeaponData.Ammo = math.clamp(ammo - 1, 0, weaponData.WeaponData.MaxAmmo) -- Updates the weapons ammo.
-
-							self._StateManagerClass:SetState(self._Player, "Firing", true) -- Plays the animation and lock's out other states.
-							RemoteEvents.OnWeaponFireRequest:FireServer(
-								weaponData.WeaponData,
-								origin,
-								self:_GetMousePos()
-							)
-
-							self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Shooting, "Firing")
-
-							local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
-								self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
-								idleAnimation:Play()
-							end)
-
-							self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
-						end
-					end)
-
-					self._maid:GiveTask(loopFunc)
+				if self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then -- Lock's out unequipping/other functions.
+					warn("[BaseCombatClass] - A state is true you cannot equip at this time.")
+					return
 				end
+
+				weaponData = self._Weapons[number]
+				self._StateManagerClass:SetState(self._Player, "Equipping", true) -- Unlocks unequipping/other functions.
+				self._ViewmodelClass:BindViewmodel(camera, weaponData.WeaponName)
+				self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Equip, "Equipping")
+
+				self._AudioServiceClient:PlayAudio("EquipSound", false)
+
+				local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
+					self._StateManagerClass:SetState(self._Player, animName, false)
+					local Animation = self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Idle, "", true)
+					self._StateManagerClass:SetState(self._Player, "IdleAnimation", Animation)
+				end)
+
+				self._maid:GiveTask(connection)
 			end
+		else
+			warn(
+				string.format(
+					"[BaseCombatService] - Cannot find any weapon with in the backpack with number %i",
+					number
+				)
+			)
+			return
+		end
+	end))
+
+	self._maid:GiveTask(self._BaseCombatInput.WeaponFiremodeChanged:Connect(function()
+		local binded = self._ViewmodelClass:_isBinded()
+
+		if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
+			local idleAnimation: AnimationTrack = self._StateManagerClass:GetStateData(self._Player, "IdleAnimation")
+
+			idleAnimation:Stop()
+
+			self._StateManagerClass:SetState(self._Player, "FireMode", true) -- Plays the animation and lock's out other states.
+			self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.FireSelector, "FireMode")
+
+			self._AudioServiceClient:PlayAudio("FireSelectorSound", false)
+
+			local connection = self._ViewmodelClass.AnimationEnded:Once(
+				function(animName) -- Once completed unlock other states/functions.
+					self._StateManagerClass:SetState(self._Player, animName, false)
+					if weaponData.WeaponData.FireMode == 1 then
+						weaponData.WeaponData.FireMode = 2
+					else
+						weaponData.WeaponData.FireMode = 1
+					end
+
+					idleAnimation:Play()
+				end
+			)
+
+			self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
+		end
+	end))
+
+	self._maid:GiveTask(self._BaseCombatInput.WeaponFired:Connect(function()
+		local binded = self._ViewmodelClass:_isBinded()
+
+		if not binded then
+			return
 		end
 
-		if input.KeyCode == Enum.KeyCode.F then -- Inspection functionality is handled here.
-			if binded and not self._StateManagerClass:GetStateData() then
-				local idleAnimation: AnimationTrack =
-					self._StateManagerClass:GetStateData(self._Player, "IdleAnimation")
+		local idleAnimation: AnimationTrack = self._StateManagerClass:GetStateData(self._Player, "IdleAnimation")
+		local fireMode = weaponData.WeaponData.FireMode
+
+		if fireMode == 1 then
+			if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
+				local ammo = weaponData.WeaponData.Ammo
+
+				if ammo <= 0 then
+					warn("[BaseCombatService] - Cannot shoot on an empty magazine.")
+					return
+				end
 
 				idleAnimation:Stop()
 
-				self._StateManagerClass:SetState(self._Player, "Inspecting", true)
-				self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Inspect, "Inspecting")
+				local viewmodelObject: Model = self._ViewmodelClass:_returnViewmodel()
+				local attachment: Attachment = viewmodelObject[weaponData.WeaponName].Barrel.Attachment
+				local origin: Attachment = attachment.WorldPosition
 
-				local connection = self._ViewmodelClass.AnimationEnded:Once(
-					function(animName) -- Once completed unlock other states/functions.
-						self._StateManagerClass:SetState(self._Player, animName, false)
-						idleAnimation:Play()
-					end
-				)
+				weaponData.WeaponData.Ammo = math.clamp(ammo - 1, 0, weaponData.WeaponData.MaxAmmo)
+
+				self._AudioServiceClient:PlayAudio("FireSound", false)
+
+				self._StateManagerClass:SetState(self._Player, "Firing", true) -- Plays the animation and lock's out other states.
+				self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Shooting, "Firing")
+				RemoteEvents.OnWeaponFireRequest:FireServer(weaponData.WeaponData, origin, self:_GetMousePos())
+
+				local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
+					self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
+					idleAnimation:Play()
+				end)
 
 				self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
+
+				return
 			end
 		end
 
-		if input.KeyCode == Enum.KeyCode.V then -- Firing mode functionality is handled here.
-			if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
-				local idleAnimation: AnimationTrack =
-					self._StateManagerClass:GetStateData(self._Player, "IdleAnimation")
+		if fireMode == 2 then
+			if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player, "Firing")) then
+				self._StateManagerClass:SetState(self._Player, "HoldingMb1", true)
 
 				idleAnimation:Stop()
 
-				self._StateManagerClass:SetState(self._Player, "FireMode", true) -- Plays the animation and lock's out other states.
-				self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.FireSelector, "FireMode")
+				local loopFunc = task.spawn(function()
+					while true do
+						task.wait(weaponData.WeaponData.FireRate)
+						local ammo = weaponData.WeaponData.Ammo
 
-				local connection = self._ViewmodelClass.AnimationEnded:Once(
-					function(animName) -- Once completed unlock other states/functions.
-						self._StateManagerClass:SetState(self._Player, animName, false)
-						if weaponData.WeaponData.FireMode == 1 then
-							weaponData.WeaponData.FireMode = 2
-						else
-							weaponData.WeaponData.FireMode = 1
+						if ammo <= 0 then -- Simple ammo check.
+							warn("[BaseCombatService] - Cannot shoot on an empty magazine.")
+							return
 						end
 
-						idleAnimation:Play()
+						if self._StateManagerClass:GetStateData(self._Player, "HoldingMb1") == false then -- Break's off the loop if we are not holding MB1
+							break
+						end
+
+						local viewmodelObject: Model = self._ViewmodelClass:_returnViewmodel()
+						local attachment: Attachment = viewmodelObject[weaponData.WeaponName].Barrel.Attachment
+						local origin: Attachment = attachment.WorldPosition
+
+						weaponData.WeaponData.Ammo = math.clamp(ammo - 1, 0, weaponData.WeaponData.MaxAmmo) -- Updates the weapons ammo.
+
+						self._AudioServiceClient:PlayAudio("FireSound", false)
+
+						self._StateManagerClass:SetState(self._Player, "Firing", true) -- Plays the animation and lock's out other states.
+						RemoteEvents.OnWeaponFireRequest:FireServer(weaponData.WeaponData, origin, self:_GetMousePos())
+
+						self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Shooting, "Firing")
+
+						local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
+							self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
+							idleAnimation:Play()
+						end)
+
+						self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
 					end
-				)
+				end)
 
-				self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
+				self._maid:GiveTask(loopFunc)
 			end
 		end
-	end)
+	end))
 
-	UserInputService.InputEnded:Connect(function(input: InputObject)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			if weaponData and self._StateManagerClass:GetStateData(self._Player, "HoldingMb1") then
-				self._StateManagerClass:SetState(self._Player, "HoldingMb1", false)
-			end
+	self._maid:GiveTask(self._BaseCombatInput.WeaponFiredEnded:Connect(function()
+		local binded = self._ViewmodelClass:_isBinded()
+
+		if weaponData and self._StateManagerClass:GetStateData(self._Player, "HoldingMb1") then
+			self._StateManagerClass:SetState(self._Player, "HoldingMb1", false)
 		end
-	end)
+	end))
 end
 
 --[[
