@@ -52,7 +52,6 @@ function BaseCombatService:_mainLoop(): ()
 
 	self._maid:GiveTask(self._BaseCombatInput.WeaponReloading:Connect(function()
 		local binded = self._ViewmodelClass:_isBinded()
-		print(self._StateManagerClass:GetStatesBulk(self._Player))
 
 		if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
 			local ammo = weaponData.WeaponData.Ammo
