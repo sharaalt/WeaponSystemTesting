@@ -62,10 +62,11 @@ function ViewmodelClass:BindViewmodel(object: Instance, viewmodelName: string): 
 	end
 
 	local pathToViewmodel: Model = game.ReplicatedStorage.Shared.Viewmodels[viewmodelName] -- Searches for the viewmodel
-
 	if pathToViewmodel then -- If it exists continue.
 		self._viewmodel = pathToViewmodel:Clone()
 		self._viewmodel.Parent = workspace
+
+		self:_attachTextures(game.Players.LocalPlayer)
 
 		self._viewmodelFunc = RunService.RenderStepped:Connect(function(a0: number)
 			self._viewmodel.PrimaryPart.CFrame = object.CFrame
@@ -145,6 +146,49 @@ function ViewmodelClass:AimdownWeapon(): () end
 -- ========================
 -- ====== Private API =====
 -- ========================
+--[[
+	Attachs the player's skin colours and textures to the viewmodel.
+
+	@return nil
+]]
+function ViewmodelClass:_attachTextures(Player: Player): ()
+	if typeof(Player) ~= "Instance" then
+		warn(string.format("[ViewmodelClass] - Type of player %q is not a valid type.", typeof(Player)))
+		return
+	end
+
+	local viewmodel = self:_returnViewmodel()
+
+	if not viewmodel then
+		warn("[ViewmodelClass] - No viewmodel is currently binded.")
+		return
+	end
+
+	local character = Player.Character or Player.CharacterAdded:Wait()
+	local leftArm = character:WaitForChild("Left Arm")
+	local rightArm = character:WaitForChild("Right Arm")
+
+	viewmodel.LeftArm.BrickColor = leftArm.BrickColor
+	viewmodel.RightArm.BrickColor = rightArm.BrickColor
+
+	local shirt = character:FindFirstChildOfClass("Shirt")
+
+	if shirt then
+		local function applyMesh(armPart: MeshPart, meshId)
+			local mesh = armPart:FindFirstChildOfClass("SpecialMesh") or Instance.new("SpecialMesh", armPart)
+			mesh.Parent = armPart
+			mesh.MeshType = Enum.MeshType.FileMesh
+			mesh.MeshId = meshId
+			mesh.TextureId = shirt.ShirtTemplate -- This correctly uses the shirt
+		end
+
+		applyMesh(viewmodel.LeftArm, "rbxassetid://12123334")
+		applyMesh(viewmodel.RightArm, "rbxassetid://12123350")
+		return
+	else
+	end
+end
+
 --[[
 	Returns the viewmodel object for other purposes.
 
