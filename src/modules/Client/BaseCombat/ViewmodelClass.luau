@@ -136,6 +136,17 @@ function ViewmodelClass:UnbindViewmodel(): ()
 	self._viewmodel = nil
 end
 
+function ViewmodelClass:BindDefaultFunc(): ()
+	if not self._viewmodelFunc then
+		warn("[ViewmodelClass] - There is no binded viewmodel function.")
+		return
+	end
+
+	self._viewmodelFunc = RunService.RenderStepped:Connect(function(a0: number)
+		self._viewmodel.PrimaryPart.CFrame = workspace.CurrentCamera.CFrame
+	end)
+end
+
 --[[
 	Aim's down sights instead of regularly holding the weapon.
 
@@ -159,7 +170,6 @@ function ViewmodelClass:AimdownWeapon(weaponName: string): ()
 	self._viewmodelFunc = RunService.RenderStepped:Connect(function(a0: number)
 		local AimPart: Part = self._viewmodel[weaponName].AimPart
 		AimPart.CFrame = workspace.CurrentCamera.CFrame
-		AimPart.Orientation = Vector3.new(0, 0, 0)
 	end)
 end
 

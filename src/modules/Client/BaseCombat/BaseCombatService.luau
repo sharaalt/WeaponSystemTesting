@@ -119,6 +119,7 @@ function BaseCombatService:_mainLoop(): ()
 
 	self._maid:GiveTask(self._BaseCombatInput.WeaponEquipped:Connect(function(number)
 		local binded = self._ViewmodelClass:_isBinded()
+		local selectedWeapon = self._Weapons[number]
 
 		if self._Weapons[number] then -- Checks if that number is cached in the weapons table.
 			local camera = workspace.CurrentCamera
@@ -308,8 +309,16 @@ function BaseCombatService:_mainLoop(): ()
 	self._maid:GiveTask(self._BaseCombatInput.WeaponAim:Connect(function()
 		local binded = self._ViewmodelClass:_isBinded()
 
-		if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
-			self._ViewmodelClass:AimdownWeapon("M4A1")
+		if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player), "IsAimedDown") then
+			local isAimedDown = self._StateManagerClass:GetStateData(self._Player, "IsAimedDown")
+
+			if isAimedDown then
+				self._StateManagerClass:SetState(self._Player, "IsAimedDown", false)
+				self._ViewmodelClass:BindDefaultFunc()
+			else
+				self._ViewmodelClass:AimdownWeapon("M4A1")
+				self._StateManagerClass:SetState(self._Player, "IsAimedDown", true)
+			end
 		end
 	end))
 end

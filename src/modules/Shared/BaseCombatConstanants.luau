@@ -9,6 +9,7 @@ local BaseCombatConstanants = {
 		FireMode = false,
 		HoldingMb1 = false,
 		IdleAnimation = false,
+		IsAimedDown = false,
 	},
 }
 
