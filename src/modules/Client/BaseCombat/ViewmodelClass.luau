@@ -76,7 +76,15 @@ function ViewmodelClass:BindViewmodel(object: Instance, viewmodelName: string): 
 	end
 end
 
-function ViewmodelClass:PlayViewmodelAnimation(animId: string, animName: string, ...: boolean)
+--[[
+	Play's animation on a binded viewmodel.
+
+	@param animId string -- The ID of the animation you want to play.
+	@param animName string -- The variable name you want to return.
+	@param ... boolean -- Should the animation be looped or not?
+	@return any
+]]
+function ViewmodelClass:PlayViewmodelAnimation(animId: string, animName: string, ...: boolean): any
 	if typeof(animId) ~= "string" then -- Some type checking.
 		warn(string.format("[ViewmodelClass] - Typeof animId %q is not a valid type.", tostring(typeof(animId))))
 		return
@@ -104,19 +112,21 @@ function ViewmodelClass:PlayViewmodelAnimation(animId: string, animName: string,
 
 	self.AnimationPlayed:Fire(animName)
 
-	local connection = animTrack.Ended:Connect(function() -- Once completed fire the AnimationEnded signal.
-		if animName ~= "" or nil then
-			self.AnimationEnded:Fire(animName)
-		end
-	end)
-
-	print("[ViewmodelClass] - Sucessfully played animation.")
-
-	self._maid:GiveTask(newAnimation, animTrack, connection) -- Add's to the maid for cleanup later.
+	self._maid:GiveTask(newAnimation)
+	self._maid:GiveTask(animTrack)
 
 	if ... then
-		return animTrack -- Hands off to BaseCombatService for handling.
+		return animTrack -- Returns the looped animation.
 	end
+
+	local connection = animTrack.Ended:Connect(function() -- Once completed fire the AnimationEnded signal.
+		self.AnimationEnded:Fire(animName)
+		animTrack:Destroy()
+		animTrack = nil
+		print(string.format("[ViewmodelClass] - Returning animName %q", animName))
+	end)
+
+	self._maid:GiveTask(connection)
 end
 
 --[[
@@ -142,7 +152,9 @@ function ViewmodelClass:BindDefaultFunc(): ()
 		return
 	end
 
-	self._viewmodelFunc = RunService.RenderStepped:Connect(function(a0: number)
+	self:_unbindFunction()
+
+	self._viewmodelFunc = RunService.RenderStepped:Connect(function()
 		self._viewmodel.PrimaryPart.CFrame = workspace.CurrentCamera.CFrame
 	end)
 end

@@ -22,6 +22,7 @@ function BaseCombatService:Init(serviceBag)
 	self._serviceBag = assert(serviceBag, "[BaseCombatService] - BaseCombatService is already initalized!")
 
 	-- Variables
+	self._IsAimedDown = false
 	self._Weapons = {}
 	self._Player = Players.LocalPlayer
 
@@ -70,9 +71,9 @@ function BaseCombatService:_mainLoop(): ()
 				self._AudioServiceClient:PlayAudio("ReloadSound", false)
 
 				local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
+					idleAnimation:Play()
 					self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
 					weaponData.WeaponData.Ammo = weaponData.WeaponData.MaxAmmo
-					idleAnimation:Play()
 				end)
 
 				self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
@@ -82,9 +83,9 @@ function BaseCombatService:_mainLoop(): ()
 				self._AudioServiceClient:PlayAudio("ReloadSound", false)
 
 				local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
-					self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
-					weaponData.WeaponData.Ammo = weaponData.WeaponData.MaxAmmo
 					idleAnimation:Play()
+					self._StateManagerClass:SetState(self._Player, "Reloading", false) -- Once completed unlock other states/functions.
+					weaponData.WeaponData.Ammo = weaponData.WeaponData.MaxAmmo
 				end)
 
 				self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
@@ -100,18 +101,19 @@ function BaseCombatService:_mainLoop(): ()
 
 			idleAnimation:Stop()
 
-			print(self._Player)
 			self._StateManagerClass:SetState(self._Player, "Inspecting", true)
 
 			self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Inspect, "Inspecting")
 			self._AudioServiceClient:PlayAudio("InspectSound", false)
 
-			local connection = self._ViewmodelClass.AnimationEnded:Once(
-				function(animName) -- Once completed unlock other states/functions.
-					self._StateManagerClass:SetState(self._Player, animName, false)
+			local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
+				self._StateManagerClass:SetState(self._Player, animName, false)
+
+				if idleAnimation then
+					print(animName)
 					idleAnimation:Play()
 				end
-			)
+			end)
 
 			self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
 		end
@@ -119,7 +121,6 @@ function BaseCombatService:_mainLoop(): ()
 
 	self._maid:GiveTask(self._BaseCombatInput.WeaponEquipped:Connect(function(number)
 		local binded = self._ViewmodelClass:_isBinded()
-		local selectedWeapon = self._Weapons[number]
 
 		if self._Weapons[number] then -- Checks if that number is cached in the weapons table.
 			local camera = workspace.CurrentCamera
@@ -241,12 +242,12 @@ function BaseCombatService:_mainLoop(): ()
 				RemoteEvents.OnWeaponFireRequest:FireServer(weaponData.WeaponData, origin, self:_GetMousePos())
 
 				local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
+					print(animName)
 					self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
 					idleAnimation:Play()
 				end)
 
 				self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
-
 				return
 			end
 		end
@@ -263,11 +264,14 @@ function BaseCombatService:_mainLoop(): ()
 						local ammo = weaponData.WeaponData.Ammo
 
 						if ammo <= 0 then -- Simple ammo check.
+							self._StateManagerClass:SetState(self._Player, "HoldingMb1", false)
 							warn("[BaseCombatService] - Cannot shoot on an empty magazine.")
+							idleAnimation:Play() -- Plays the idle animation if there is no ammo.
 							return
 						end
 
 						if self._StateManagerClass:GetStateData(self._Player, "HoldingMb1") == false then -- Break's off the loop if we are not holding MB1
+							idleAnimation:Play() -- Plays the idle animation if the loop breaks off.
 							break
 						end
 
@@ -299,8 +303,6 @@ function BaseCombatService:_mainLoop(): ()
 	end))
 
 	self._maid:GiveTask(self._BaseCombatInput.WeaponFiredEnded:Connect(function()
-		local binded = self._ViewmodelClass:_isBinded()
-
 		if weaponData and self._StateManagerClass:GetStateData(self._Player, "HoldingMb1") then
 			self._StateManagerClass:SetState(self._Player, "HoldingMb1", false)
 		end
@@ -309,15 +311,17 @@ function BaseCombatService:_mainLoop(): ()
 	self._maid:GiveTask(self._BaseCombatInput.WeaponAim:Connect(function()
 		local binded = self._ViewmodelClass:_isBinded()
 
-		if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player), "IsAimedDown") then
-			local isAimedDown = self._StateManagerClass:GetStateData(self._Player, "IsAimedDown")
+		if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player)) then
+			local isAimedDown = self._isAimedDown
 
 			if isAimedDown then
-				self._StateManagerClass:SetState(self._Player, "IsAimedDown", false)
+				self._isAimedDown = false
 				self._ViewmodelClass:BindDefaultFunc()
+				print("bindingDefault")
 			else
+				self._isAimedDown = true
 				self._ViewmodelClass:AimdownWeapon("M4A1")
-				self._StateManagerClass:SetState(self._Player, "IsAimedDown", true)
+				print("bindingAimed")
 			end
 		end
 	end))
@@ -385,6 +389,7 @@ function BaseCombatService:_checkIfTrue(states, ...): any
 
 	for i, v in pairs(states) do
 		if v == true and i ~= ... then
+			print(v)
 			trueCount += 1
 		end
 	end
