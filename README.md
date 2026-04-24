@@ -28,6 +28,10 @@ To add new packages you can run `npm install @quenty/package-name` or whatever t
 # Credits & Attribution
 I do not own all the asset's used in this system i.e. Weapon impact decals, Sounds, etc.
 
+### Models
+- [Viewmodel](https://create.roblox.com/store/asset/5640595108/Viewmodel) - The viewmodel used on most if not all weapons.
+- [Weapons](https://create.roblox.com/store/asset/5567986929/THE-COMPREHENSIVE-GUNK-KIT-BIG-UPDATE-1) - Where all if not all weapon models originate from.
+
 ### Sounds
 - [FireSound](https://www.roblox.com/library/5096003821) - The default sound for firing weapons.
 - [ReloadSound](https://www.roblox.com/library/104445304303143) - The default sound for reloading weapons.
