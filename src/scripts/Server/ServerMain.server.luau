@@ -18,11 +18,29 @@ local partCache =
 	require(game.ReplicatedStorage.Dependencies._Index["encodedvenom_fastcastredux@0.1.3"].fastcastredux.PartCache)
 
 local bulletTemp = Instance.new("Part")
-bulletTemp.Size = Vector3.new(1, 1, 1)
+bulletTemp.Size = Vector3.new(0.001, 0.5, 0.5)
 bulletTemp.Anchored = true
-bulletTemp.BrickColor = BrickColor.new("Bright red")
+bulletTemp.Transparency = 1
 bulletTemp.Material = Enum.Material.Neon
 bulletTemp.CanCollide = false
+
+local attachment0 = Instance.new("Attachment")
+attachment0.Parent = bulletTemp
+attachment0.Position = Vector3.new(0, 0.504, 0)
+
+local attcachment1 = Instance.new("Attachment")
+attcachment1.Parent = bulletTemp
+attcachment1.Position = Vector3.new(0, -0.496, 0)
+
+local trail = Instance.new("Trail")
+trail.Parent = bulletTemp
+trail.Attachment0 = attachment0
+trail.Attachment1 = attcachment1
+trail.MaxLength = 3
+trail.MinLength = 0
+trail.Lifetime = 0.5
+trail.FaceCamera = true
+trail.Color = ColorSequence.new(Color3.fromRGB(253, 255, 119))
 
 local CosmeticBulletProvider = partCache.new(bulletTemp, 100, workspace.Bullets)
 
@@ -52,7 +70,7 @@ local function onLengthChanged(cast, lastPoint, direction, length, velocity, bul
 	end
 end
 
-local function rayHit(_cast, result, _velocity, bullet)
+local function rayHit(_cast, result: RaycastResult, _velocity, bullet: Part)
 	local hitPart = result.Instance
 	local character = hitPart:FindFirstAncestorOfClass("Model")
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -60,10 +78,31 @@ local function rayHit(_cast, result, _velocity, bullet)
 	if humanoid and humanoid.Health > 0 then
 		local damage = (hitPart.Name == "Head") and data.HeadshotDamage or data.Damage
 		humanoid:TakeDamage(damage)
-		print(humanoid.Health)
+	else
+		local tPart = Instance.new("Part") -- Create's a temporary impact decal.
+		tPart.Anchored = true
+		tPart.Position = result.Position
+		tPart.Rotation = Vector3.new(
+			result.Instance.Orientation.X,
+			result.Instance.Orientation.Y + 90,
+			result.Instance.Orientation.Z
+		)
+		tPart.Parent = workspace
+		tPart.Size = Vector3.new(0.001, 0.5, 0.5)
+		tPart.Transparency = 1
+
+		local impactDecal = Instance.new("Decal")
+		impactDecal.Parent = tPart
+		impactDecal.Face = "Left"
+		impactDecal.Texture = "rbxassetid://11645179630"
+
+		local impactDecal2 = Instance.new("Decal") -- The stupidest fix to the issue.. Ah well.
+		impactDecal2.Parent = tPart
+		impactDecal2.Face = "Right"
+		impactDecal2.Texture = "rbxassetid://11645179630"
 	end
 
-	game:GetService("Debris"):AddItem(bullet, 1)
+	bullet:Destroy()
 end
 
 RemoteEvents.OnWeaponFireRequest.OnServerEvent:Connect(function(_player, newData, origin, mouse)

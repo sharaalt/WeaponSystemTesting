@@ -56,8 +56,8 @@ function BaseCombatInput:InputLoop(): ()
 	}
 
 	local connectionOne = UserInputService.InputBegan:Connect(function(Input: InputObject)
-		if numbers[Input.KeyCode] then
-			self.WeaponEquipped:Fire(numbers[Input.KeyCode])
+		if numbers[Input.KeyCode] then -- Make sure the number is a valid keycode before processing.
+			self.WeaponEquipped:Fire(numbers[Input.KeyCode]) -- Equip that number if possible.
 		elseif Input.KeyCode == Enum.KeyCode.R then
 			self.WeaponReloading:Fire()
 		elseif Input.KeyCode == Enum.KeyCode.F then

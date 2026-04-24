@@ -32,7 +32,6 @@ end
 -- ============================
 -- ======== Public API ========
 -- ============================
-
 --[[
 	Bind's a viewmodel to a specified object.
 
