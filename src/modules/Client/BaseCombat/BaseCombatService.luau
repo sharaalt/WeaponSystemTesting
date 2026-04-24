@@ -28,10 +28,13 @@ function BaseCombatService:Init(serviceBag)
 
 	-- Services
 	self._maid = Maid.new()
+	self._CameraStackService = self._serviceBag:GetService(require("CameraStackService"))
+	self._AudioServiceClient = self._serviceBag:GetService(require("AudioServiceClient"))
+
+	-- Classes
 	self._ViewmodelClass = ViewmodelClass.new()
 	self._StateManagerClass = StateManagerClass.new()
 	self._BaseCombatInput = BaseCombatInput.new()
-	self._AudioServiceClient = self._serviceBag:GetService(require("AudioServiceClient"))
 
 	self._maid:GiveTask(task.spawn(function()
 		self:_mainLoop()
@@ -241,6 +244,8 @@ function BaseCombatService:_mainLoop(): ()
 				self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Shooting, "Firing")
 				RemoteEvents.OnWeaponFireRequest:FireServer(weaponData.WeaponData, origin, self:_GetMousePos())
 
+				self._CameraStackService:GetImpulseCamera():Impulse(Vector3.new(0.5, 5, 0.5) * math.random())
+
 				local connection = self._ViewmodelClass.AnimationEnded:Once(function(animName)
 					print(animName)
 					self._StateManagerClass:SetState(self._Player, animName, false) -- Once completed unlock other states/functions.
@@ -256,14 +261,17 @@ function BaseCombatService:_mainLoop(): ()
 			if binded and not self:_checkIfTrue(self._StateManagerClass:GetStatesBulk(self._Player, "Firing")) then
 				self._StateManagerClass:SetState(self._Player, "HoldingMb1", true)
 
-				idleAnimation:Stop()
-
 				local loopFunc = task.spawn(function()
-					while true do
-						task.wait(weaponData.WeaponData.FireRate)
-						local ammo = weaponData.WeaponData.Ammo
+					if weaponData.WeaponData.Ammo <= 0 then -- Perlimenary check.
+						self._StateManagerClass:SetState(self._Player, "HoldingMb1", false)
+						warn("[BaseCombatService] - Cannot shoot on an empty magazine.")
+						return
+					end
 
-						if ammo <= 0 then -- Simple ammo check.
+					idleAnimation:Stop()
+
+					while true do
+						if weaponData.WeaponData.Ammo <= 0 then -- Simple ammo check.
 							self._StateManagerClass:SetState(self._Player, "HoldingMb1", false)
 							warn("[BaseCombatService] - Cannot shoot on an empty magazine.")
 							idleAnimation:Play() -- Plays the idle animation if there is no ammo.
@@ -279,12 +287,17 @@ function BaseCombatService:_mainLoop(): ()
 						local attachment: Attachment = viewmodelObject[weaponData.WeaponName].Barrel.Attachment
 						local origin: Attachment = attachment.WorldPosition
 
-						weaponData.WeaponData.Ammo = math.clamp(ammo - 1, 0, weaponData.WeaponData.MaxAmmo) -- Updates the weapons ammo.
+						weaponData.WeaponData.Ammo =
+							math.clamp(weaponData.WeaponData.Ammo - 1, 0, weaponData.WeaponData.MaxAmmo) -- Updates the weapons ammo.
 
 						self._AudioServiceClient:PlayAudio("FireSound", false)
 
 						self._StateManagerClass:SetState(self._Player, "Firing", true) -- Plays the animation and lock's out other states.
 						RemoteEvents.OnWeaponFireRequest:FireServer(weaponData.WeaponData, origin, self:_GetMousePos())
+
+						self._CameraStackService
+							:GetImpulseCamera()
+							:Impulse(Vector3.new(4, 3, 0) * (math.random() - 0.8))
 
 						self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Shooting, "Firing")
 
@@ -294,6 +307,8 @@ function BaseCombatService:_mainLoop(): ()
 						end)
 
 						self._maid:GiveTask(connection) -- Add's to the maid for cleanup at a later time.
+
+						task.wait(weaponData.WeaponData.FireRate)
 					end
 				end)
 

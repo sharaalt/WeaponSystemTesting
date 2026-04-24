@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@quenty/binder": "^14.21.0",
+    "@quenty/camera": "^14.38.0",
     "@quenty/clienttranslator": "^14.20.0",
     "@quenty/cmdrservice": "^13.24.0",
     "@quenty/loader": "^10.9.0",

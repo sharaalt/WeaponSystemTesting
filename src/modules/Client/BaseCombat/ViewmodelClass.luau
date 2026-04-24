@@ -3,6 +3,7 @@ local require = loader.load(script)
 
 -- External Services
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 -- Internal Services
 local BaseObject = require("BaseObject")
@@ -178,9 +179,19 @@ function ViewmodelClass:AimdownWeapon(weaponName: string): ()
 
 	self:_unbindFunction()
 
-	self._viewmodelFunc = RunService.RenderStepped:Connect(function(a0: number)
+	local TweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0)
+	local AimAlpha = Instance.new("NumberValue")
+	local Tween = TweenService:Create(AimAlpha, TweenInfo, { Value = 1 })
+
+	Tween:Play()
+
+	self._viewmodelFunc = RunService.RenderStepped:Connect(function(dt)
 		local AimPart: Part = self._viewmodel[weaponName].AimPart
-		AimPart.CFrame = workspace.CurrentCamera.CFrame
+		local CamereCFrame = game.Workspace.CurrentCamera.CFrame
+		local Difference = self._viewmodel.PrimaryPart.CFrame:Inverse() * AimPart.CFrame
+		local Goal = CamereCFrame * Difference:Inverse()
+
+		self._viewmodel:SetPrimaryPartCFrame(self._viewmodel.PrimaryPart.CFrame:Lerp(Goal, AimAlpha.Value))
 	end)
 end
 
