@@ -28,17 +28,20 @@ function BaseCombatService:Init(serviceBag)
 
 	-- Services
 	self._maid = Maid.new()
+	self._MobileInputService = self._serviceBag:GetService(require("MobileInputService"))
 	self._CameraStackService = self._serviceBag:GetService(require("CameraStackService"))
 	self._AudioServiceClient = self._serviceBag:GetService(require("AudioServiceClient"))
 
 	-- Classes
 	self._ViewmodelClass = ViewmodelClass.new()
 	self._StateManagerClass = StateManagerClass.new()
-	self._BaseCombatInput = BaseCombatInput.new()
+	self._BaseCombatInput = BaseCombatInput.new(self._MobileInputService)
 
 	self._maid:GiveTask(task.spawn(function()
+		self._Player.PlayerGui.ScreenOrientation = Enum.ScreenOrientation.LandscapeRight
 		self:_mainLoop()
 		self:_SortTools()
+		self:_MonitorEquips()
 	end))
 end
 
@@ -242,7 +245,7 @@ function BaseCombatService:_mainLoop(): ()
 
 				self._StateManagerClass:SetState(self._Player, "Firing", true) -- Plays the animation and lock's out other states.
 				self._ViewmodelClass:PlayViewmodelAnimation(weaponData.Animations.Shooting, "Firing")
-				RemoteEvents.OnWeaponFireRequest:FireServer(weaponData.WeaponData, origin, self:_GetMousePos())
+				RemoteEvents.OnWeaponFireRequest:FireServer(weaponData.WeaponData, origin, self:_GetCenterScreenPos())
 
 				self._CameraStackService:GetImpulseCamera():Impulse(Vector3.new(0.5, 5, 0.5) * math.random())
 
@@ -293,7 +296,11 @@ function BaseCombatService:_mainLoop(): ()
 						self._AudioServiceClient:PlayAudio("FireSound", false)
 
 						self._StateManagerClass:SetState(self._Player, "Firing", true) -- Plays the animation and lock's out other states.
-						RemoteEvents.OnWeaponFireRequest:FireServer(weaponData.WeaponData, origin, self:_GetMousePos())
+						RemoteEvents.OnWeaponFireRequest:FireServer(
+							weaponData.WeaponData,
+							origin,
+							self:_GetCenterScreenPos()
+						)
 
 						self._CameraStackService
 							:GetImpulseCamera()
@@ -414,6 +421,40 @@ function BaseCombatService:_checkIfTrue(states, ...): any
 	else
 		return false
 	end
+end
+
+--[[
+	Monitors and detects equipped tools for mobile input support.
+
+	@return ()
+]]
+function BaseCombatService:_MonitorEquips(): ()
+	local Character = self._Player.Character or self._Player.CharacterAdded:Wait()
+
+	self._maid:GiveTask(Character.ChildAdded:Connect(function(child)
+		if child:IsA("Tool") and child:HasTag("Weapon") then
+			print("[BaseCombatService] - Mobile/PC user equipped tool: " .. child.Name)
+
+			for slot, data in pairs(self._Weapons) do
+				if data.WeaponName == child.Name then
+					self._BaseCombatInput:TranslateEquipInput(slot)
+					break
+				end
+			end
+		end
+	end))
+end
+
+--[[
+	Returns the Vector3 form of the position to the center of the screen.
+
+	@return Vector3
+]]
+function BaseCombatService:_GetCenterScreenPos(): Vector3
+	local camera = workspace.CurrentCamera
+	local centerPoint = camera.CFrame.Position + (camera.CFrame.LookVector * 100)
+
+	return centerPoint
 end
 
 function BaseCombatService:Destroy()
