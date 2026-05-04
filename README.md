@@ -25,6 +25,21 @@ To build the game, you want to do the following
 
 To add new packages you can run `npm install @quenty/package-name` or whatever the package you want.
 
+# Contributing
+
+This repo is open for contributions if you'd like to repurpose the code you can take it and if you'd like to push a pull request and, I'll take a look at the code!
+
+# To-Do
+
+### Engine Tasks
+
+- [ ] Refactor all systems (They're a bit bloated)
+- [ ] Work on a method to display ammo
+- [ ] Implement health loss related UI
+### Non-Engine Tasks
+
+- [ ] Create a test map
+
 # Credits & Attribution
 I do not own all the asset's used in this system i.e. Weapon impact decals, Sounds, etc.
 
