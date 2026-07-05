@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "@quenty/baseobject": "^10.13.0",
+    "@quenty/binder": "^14.36.1",
+    "@quenty/clienttranslator": "^14.37.1",
+    "@quenty/cmdrservice": "^13.45.2",
+    "@quenty/loader": "^10.11.0",
+    "@quenty/nevermore-cli": "^4.33.1",
+    "@quenty/servicebag": "^11.18.1"
+  },
+  "allowScripts": {
+    "@quenty/cli-output-helpers@1.17.0": true,
+    "@quenty/nevermore-cli-helpers@1.16.0": true,
+    "@quenty/nevermore-template-helpers@1.18.0": true
+  }
+}

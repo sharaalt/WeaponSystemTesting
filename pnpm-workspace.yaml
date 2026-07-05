@@ -1,0 +1,63 @@
+# pnpm workspace configuration for Nevermore monorepo
+# See: https://pnpm.io/workspaces
+
+# Uncomment if you want to include Nevermore and Raven packages in the workspace for local development.
+# You can use `raven link-dependencies` to link the packages together and work on them simultaneously.
+# You should run `raven version-dependencies` before committing to ensure correct versions are set.
+
+#packages:
+#- '/*'
+#- '../Nevermore/src/*' # <managed by raven-cli>
+#- '../Raven/src/*' # <managed by raven-cli>
+
+allowBuilds:
+  '@quenty/acceltween': true
+  '@quenty/baseobject': true
+  '@quenty/binarysearch': true
+  '@quenty/binder': true
+  '@quenty/blend': true
+  '@quenty/brio': true
+  '@quenty/cancellabledelay': true
+  '@quenty/canceltoken': true
+  '@quenty/characterutils': true
+  '@quenty/cli-output-helpers': true
+  '@quenty/clienttranslator': true
+  '@quenty/cmdrservice': true
+  '@quenty/collectionserviceutils': true
+  '@quenty/deferred': true
+  '@quenty/ducktype': true
+  '@quenty/enums': true
+  '@quenty/enumutils': true
+  '@quenty/grouputils': true
+  '@quenty/insertserviceutils': true
+  '@quenty/instanceutils': true
+  '@quenty/linkutils': true
+  '@quenty/loader': true
+  '@quenty/maid': true
+  '@quenty/math': true
+  '@quenty/nevermore-cli-helpers': true
+  '@quenty/nevermore-template-helpers': true
+  '@quenty/nevermore-test-runner': true
+  '@quenty/observablecollection': true
+  '@quenty/permissionprovider': true
+  '@quenty/playerutils': true
+  '@quenty/promise': true
+  '@quenty/promisemaid': true
+  '@quenty/pseudolocalize': true
+  '@quenty/remotefunctionutils': true
+  '@quenty/remoting': true
+  '@quenty/rx': true
+  '@quenty/rxsignal': true
+  '@quenty/servicebag': true
+  '@quenty/signal': true
+  '@quenty/spring': true
+  '@quenty/steputils': true
+  '@quenty/string': true
+  '@quenty/symbol': true
+  '@quenty/table': true
+  '@quenty/templateprovider': true
+  '@quenty/throttle': true
+  '@quenty/typeutils': true
+  '@quenty/uiobjectutils': true
+  '@quenty/valuebaseutils': true
+  '@quenty/valueobject': true
