@@ -13,6 +13,7 @@
 -- External Services
 local BaseCombatInput = require(script.Parent.BaseCombatInput)
 local BaseCombatProfile = require(script.Parent.BaseCombatProfile)
+local StateManager = require(script.Parent.Parent.StateManager)
 local ViewmodelHelper = require(script.Parent.ViewmodelHelper)
 local Players = game:GetService("Players")
 
@@ -43,6 +44,7 @@ function BaseCombatService:Init(serviceBag): ()
 	self._maid = Maid.new()
 	self._BaseCombatInput = BaseCombatInput.new()
 	self._ViewmodelHelper = ViewmodelHelper.new(self._Player)
+	self._StateManager = StateManager.new()
 
 	-- Initalize the main loop and grab tagged weapons.
 	self._maid:GiveTask(task.spawn(function()
@@ -73,6 +75,12 @@ function BaseCombatService:_mainLoop(): ()
 
 	-- Unequipping Functionality
 	self._maid:GiveTask(self._BaseCombatInput.WeaponUnequipping:Connect(function(number)
+		if self._ActiveWeapon then
+			if self._ActiveWeapon.IsEquipped == false then
+				return
+			end
+		end
+
 		for i, v in ipairs(self._TaggedWeapons) do
 			if i == number then
 				v.WeaponData.Equipped = false

@@ -58,7 +58,7 @@ end
     @return ()
 ]]
 function ViewmodelHelper:AttachViewmodel(viewmodelname: string): ()
-	-- Although not really needed always good to have type checking.
+	-- Although not really needed always nice to have type checking.
 	if typeof(viewmodelname) ~= "string" then
 		warn(string.format("[ViewmodelHelper] - Type of viewmodelname %q is not a valid type.", typeof(viewmodelname)))
 		return
@@ -97,15 +97,19 @@ end
 	Play's a designated animation for the viewmodel (ideally should be viewmodel related if that wasn't obvious enough).
 
 	@param animationId string -- The ID for the animation you want to play.
+	@param ... function -- The optional callback function for the animation.
 
 	@return ()
 ]]
-function ViewmodelHelper:PlayAnimation(animationId: string): ()
+function ViewmodelHelper:PlayAnimation(animationId: string, ...): ()
 	-- A little bit of unnecessary typechecking :-)
 	if typeof(animationId) ~= "string" then
 		warn(string.format("[ViewmodelHelper] - Typeof animationId %q is not a valid type.", typeof(animationId)))
 		return
 	end
+
+	-- Define the vararg.
+	local callback = ...
 
 	-- Grab's the viewmodel animator.
 	local Animator: Animator = self._ActiveViewmodel.viewmodel.Humanoid.Animator
@@ -121,6 +125,7 @@ function ViewmodelHelper:PlayAnimation(animationId: string): ()
 
 	self._maid:GiveTask(Track.Ended:Connect(function()
 		self.AnimationCompleted:Fire()
+		callback()
 	end))
 end
 
