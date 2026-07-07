@@ -89,6 +89,7 @@ function ViewmodelHelper:AttachViewmodel(viewmodelname: string): ()
 		-- Hand off connection for maid cleanup.
 		self._maid:GiveTask(connection)
 
+		-- A bit of confirmation when debugging.
 		print(string.format("[ViewmodelHelper] - Sucessfully binded %q to the user.", newViewmodel.Name))
 	end
 end
@@ -125,10 +126,51 @@ function ViewmodelHelper:PlayAnimation(animationId: string, ...): ()
 
 	self._maid:GiveTask(Track.Ended:Connect(function()
 		self.AnimationCompleted:Fire()
-		callback()
+
+		if callback then
+			callback()
+		end
 	end))
 end
 
+--[[
+	Play's an animation but return's a callback once a certain point is reached.
+
+	@param animId string -- The ID of the animation you want you play.
+	@param animEventName string -- The name of the animation event you want to detect.
+	@param callback function -- The callback function.
+	
+	@return any
+]]
+function ViewmodelHelper:PlayAnimationWithEvent(animId: string, animEventName: string, callback): any
+	-- A bit of type checking make sure everything is in order :-)
+	if typeof(animId) ~= "string" then
+		warn(string.format("[ViewmodelHelper] - Typeof animId %q is not a valid type.", typeof(animId)))
+		return
+	end
+
+	if typeof(animEventName) ~= "string" then
+		warn(string.format("[ViewmodelHelper] - Typeof animEventName %q is not a valid type.", typeof(animEventName)))
+		return
+	end
+
+	-- Grab's the viewmodel animator.
+	local Animator: Animator = self._ActiveViewmodel.viewmodel.Humanoid.Animator
+	local Animation = Instance.new("Animation")
+	Animation.AnimationId = animId
+
+	-- Setup the track.
+	local Track = Animator:LoadAnimation(Animation)
+	Track.Looped = false
+
+	-- Play's the track than fire's an ended signal.
+	Track:Play()
+
+	-- Return's the callback.
+	self._maid:GiveTask(Track:GetMarkerReachedSignal(animEventName):Connect(function()
+		callback()
+	end))
+end
 --[[
 	Detachs the viewmodel from the player linked to the class.
 

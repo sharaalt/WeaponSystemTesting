@@ -73,7 +73,7 @@ function BaseCombatProfile._FormatWeaponData(WeaponData: any): Types.WeaponData
 
 	-- The new "treated" table.
 	local newTbl: Types.WeaponData = {
-		Equipped = false,
+		WeaponName = realData.WeaponName,
 		Ammo = realData.MaxAmmo,
 		MaxAmmo = realData.MaxAmmo,
 		WeaponAimSpeed = realData.WeaponAimSpeed,
@@ -84,6 +84,7 @@ function BaseCombatProfile._FormatWeaponData(WeaponData: any): Types.WeaponData
 		WeaponEquipAnim = realData.ReturnAnimByName("WeaponEquipAnim"),
 		WeaponFireAnim = realData.ReturnAnimByName("WeaponFireAnim"),
 		WeaponReloadAnim = realData.ReturnAnimByName("WeaponReloadAnim"),
+		WeaponUnequipAnim = realData.ReturnAnimByName("WeaponUnequipAnim"),
 		WeaponInspectAnim = realData.ReturnAnimByName("WeaponInspectAnim"),
 	}
 

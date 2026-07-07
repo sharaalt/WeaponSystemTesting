@@ -12,6 +12,7 @@
 
 -- External Services
 local StateManagerProfile = require(script.Parent.StateManagerProfile)
+local Types = require(script.Parent.Types)
 
 local loader = require(script.Parent.Parent.loader)
 local require = loader.load(script)
@@ -106,18 +107,13 @@ function StateManager:UpdateStateValue(StateName: string, Value: any): ()
 
 	-- Check's if the state actually exists.
 	if State then
-		-- Update the value if it does.
-		print(self._StateCache)
-
+		-- Update the value if it does actually exist.
 		State.StateValue = Value
-
-		print(self._StateCache)
 
 		print(string.format("[StateManager] - Sucessfully updated %q to %q", StateName, tostring(Value)))
 
 		-- Fire's a signal that indicate's a state update.
 		self.StateUpdated:Fire(StateName)
-
 		return
 	else
 		-- Throw a warning if it doesn't.
@@ -146,7 +142,7 @@ function StateManager:RemoveState(StateName: string): ()
 	-- Check if the state exists if not throw a warnning.
 	if State then
 		-- If it exists destroy/delete the state.
-		self._StateCache = nil
+		self._StateCache[StateName] = nil
 
 		-- Fire's a StateDeleted signal to signify the state has been deleted.
 		self.StateDeleted:Fire(StateName)
@@ -155,6 +151,15 @@ function StateManager:RemoveState(StateName: string): ()
 		warn(string.format("[StateManager] - No state exists with the name %q", StateName))
 		return
 	end
+end
+
+--[[
+	Retrive's all states in the state cache.
+
+	@return {Types.CacheTable}
+]]
+function StateManager:GetAllStates(): { [string]: Types.CacheTable }
+	return self._StateChache
 end
 
 -- ==================

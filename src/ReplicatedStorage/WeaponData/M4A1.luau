@@ -9,9 +9,20 @@ local M4A1 = {
 	BaseDamage = 10,
 	HeadshotDamage = 20,
 
+	-- Sounds
+	Sounds = {
+		FireSound = "",
+		EquipSound = "",
+		UnequipSound = "",
+		FireModeSound = "",
+		ReloadSound = "",
+		InspectSound = "",
+	},
+
 	-- Animations
 	Animations = {
 		WeaponEquipAnim = "rbxassetid://93263765397131",
+		WeaponUnequipAnim = "rbxassetid://104773513340363",
 		WeaponFireAnim = "",
 		WeaponReloadAnim = "",
 		WeaponInspectAnim = "",

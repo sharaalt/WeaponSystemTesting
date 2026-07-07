@@ -1,4 +1,12 @@
+local StateTypes = require(script.Parent.Parent.StateManager.Types)
+
 local Types = {}
+
+export type StateData = {
+	_stateBrio: any,
+	_states: { StateTypes.CacheTable },
+	_weaponData: WeaponData,
+}
 
 export type ViewmodelData = {
 	ViewmodelObject: Model,
@@ -7,7 +15,7 @@ export type ViewmodelData = {
 
 export type WeaponData = {
 	-- Basic Data
-	Equipped: boolean,
+	WeaponName: string,
 	Ammo: number,
 	MaxAmmo: number,
 	WeaponAimSpeed: number,
@@ -20,6 +28,7 @@ export type WeaponData = {
 	WeaponEquipAnim: string,
 	WeaponFireAnim: string,
 	WeaponReloadAnim: string,
+	WeaponUnequipAnim: string,
 	WeaponInspectAnim: string,
 }
 

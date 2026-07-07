@@ -28,6 +28,8 @@ function BaseCombatInput.new()
 	self._maid = Maid.new()
 
 	-- Signals
+	self.WeaponFired = Signal.new()
+	self.WeaponAimed = Signal.new()
 	self.WeaponEquipped = Signal.new()
 	self.WeaponReloading = Signal.new()
 	self.WeaponEquipping = Signal.new()
@@ -70,6 +72,10 @@ function BaseCombatInput:_InputLoop()
 			self.WeaponReloading:Fire()
 		elseif input.KeyCode == Enum.KeyCode.F then
 			print("Changing Firing Mode")
+		elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+			self.WeaponFired:Fire()
+		elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+			self.WeaponAimed:Fire()
 		end
 	end)
 
