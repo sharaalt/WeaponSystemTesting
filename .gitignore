@@ -9,3 +9,4 @@ dist
 sourcemap.json
 .DS_Store
 globalTypes.d.lua
+package-lock.json
