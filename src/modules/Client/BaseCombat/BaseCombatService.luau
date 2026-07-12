@@ -13,6 +13,7 @@
 -- External Services
 local BaseCombatInput = require(script.Parent.BaseCombatInput)
 local BaseCombatProfile = require(script.Parent.BaseCombatProfile)
+local BaseCombatServiceConstants = require(script.Parent.Parent.Parent.Shared.Modules.BaseCombatServiceConstants)
 local StateManager = require(script.Parent.Parent.StateManager)
 local ViewmodelHelper = require(script.Parent.ViewmodelHelper)
 local Players = game:GetService("Players")
@@ -66,14 +67,16 @@ end
 function BaseCombatService:_mainLoop(): ()
 	-- Our little table of expandable state variables :-)
 	local initVariables = {
-		Equipping = false,
+		BaseCombatServiceConstants.EQUIPPING_STATE_NAME = false,
 		Unequipping = false,
 		Reloading = false,
 		Aiming = false,
 		Inspecting = false,
 
 		-- Animation States
-		IdleAnim = nil,
+		-- Animations = {
+		-- 	IdleAnim = nil,
+		-- },
 	}
 
 	-- Equipping Functionality
@@ -111,19 +114,24 @@ function BaseCombatService:_mainLoop(): ()
 
 				-- Check if the names match.
 				if self._ActiveWeapon._weaponData.WeaponName == weaponName then
-					if self._ActiveWeapon._states.Equipping.StateValue == false then
-						-- Assuming the animation has a destroy event we destroy it a bit early to prevent visibility.
-						self._ViewmodelHelper:PlayAnimationWithEvent(
-							self._ActiveWeapon._weaponData.WeaponUnequipAnim,
-							"DestroyModel",
-							function()
-								-- Cleanup callback.
-								self._ActiveWeapon._stateBrio:Kill()
-								self._ActiveWeapon = nil
-								self._ViewmodelHelper:DetachViewmodel()
-							end
-						)
+					if self:_checkStateVariables() then
+						warn("[BaseWeaponService] - A state is active at this time cannot preform action.")
+						return
 					end
+
+					-- self._StateManager:UpdateStateValue(, _)
+
+					-- Assuming the animation has a destroy event we destroy it a bit early to prevent visibility.
+					self._ViewmodelHelper:PlayAnimationWithEvent(
+						self._ActiveWeapon._weaponData.WeaponUnequipAnim,
+						"DestroyModel",
+						function()
+							-- Cleanup callback.
+							self._ActiveWeapon._stateBrio:Kill()
+							self._ActiveWeapon = nil
+							self._ViewmodelHelper:DetachViewmodel()
+						end
+					)
 				end
 			end
 		end
@@ -222,6 +230,34 @@ function BaseCombatService:_initWeaponTbl(variables: { boolean }): Types.StateDa
 	end
 
 	return BindedStates
+end
+
+--[[
+	Determines if any variable in the states are true.
+
+	@return boolean
+]]
+function BaseCombatService:_checkStateVariables(): boolean
+	-- Counter
+	local trueVariables = 0
+
+	-- States
+	local stateValues: { [string]: boolean } = self._ActiveWeapon._states
+
+	-- Determines if any variable in the state pool is true.
+	for i, value in pairs(stateValues) do
+		print(i, value)
+		if value.StateValue then
+			trueVariables += 1
+		end
+	end
+
+	-- If more than 0 variables are true than we return else we throw false.
+	if trueVariables > 0 then
+		return true
+	else
+		return false
+	end
 end
 
 --[[

@@ -11,6 +11,7 @@
 ]]
 
 -- External Requierments
+local MarketPlaceService = game:GetService("MarketplaceService")
 local RunService = game:GetService("RunService")
 
 local Viewmodels = game.ReplicatedStorage.Shared.Viewmodels
@@ -106,6 +107,12 @@ function ViewmodelHelper:PlayAnimation(animationId: string, ...): ()
 	-- A little bit of unnecessary typechecking :-)
 	if typeof(animationId) ~= "string" then
 		warn(string.format("[ViewmodelHelper] - Typeof animationId %q is not a valid type.", typeof(animationId)))
+		return
+	end
+
+	-- If there isn't a binded viewmodel do not continue we can't play a aniamtion with nothing now can we?
+	if self._ActiveViewmodel == nil then
+		warn("[ViewmodelHelper] - No active viewmodel cannot play animation.")
 		return
 	end
 
