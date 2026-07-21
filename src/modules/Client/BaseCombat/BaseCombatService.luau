@@ -53,6 +53,7 @@ function BaseCombatService:Init(serviceBag): ()
 	self._maid:GiveTask(task.spawn(function()
 		self:_getWeapons()
 		self:_mainLoop()
+		self:_generateTools()
 	end))
 end
 
@@ -65,13 +66,17 @@ end
     @return ()
 ]]
 function BaseCombatService:_mainLoop(): ()
+	-- A little bit of an easier way to access the player.
+	local Player: Player = self._Player
+
 	-- Our little table of expandable state variables :-)
 	local initVariables = {
-		BaseCombatServiceConstants.EQUIPPING_STATE_NAME = false,
+		[BaseCombatServiceConstants.EQUIPPING_STATE_NAME] = false,
 		Unequipping = false,
 		Reloading = false,
 		Aiming = false,
 		Inspecting = false,
+		Firing = false,
 
 		-- Animation States
 		-- Animations = {
@@ -79,72 +84,101 @@ function BaseCombatService:_mainLoop(): ()
 		-- },
 	}
 
+	-- Character Signals
+	self._maid:GiveTask(Player.Backpack.ChildAdded:Connect(function(a0: Instance)
+		self:_getWeapons()
+	end))
+
+	self._maid:GiveTask(Player.Backpack.ChildAdded:Connect(function(a0: Instance)
+		self:_getWeapons()
+	end))
+
 	-- Equipping Functionality
 	self._maid:GiveTask(self._BaseCombatInput.WeaponEquipped:Connect(function(number)
-		for i, v in ipairs(self._TaggedWeapons) do
-			if i == number then
-				if self._ActiveWeapon then
-					warn("[BaseCombatService] - There's already an active weapon in use.")
-					return
-				end
-
-				-- Finish off initalizing the states table and set it as the active weapon.
-				local states: Types.StateData = self:_initWeaponTbl(initVariables)
-				states._weaponData = v.WeaponData
-				self._ActiveWeapon = states
-
-				-- Update the state value to true to prevent sudden unequips.
-				self._StateManager:UpdateStateValue(states._states.Equipping.StateName, true)
-
-				-- Attach the model and begin the equip animation.
-				self._ViewmodelHelper:AttachViewmodel(v.Tool.Name)
-				self._ViewmodelHelper:PlayAnimation(v.WeaponData.WeaponEquipAnim, function()
-					self._StateManager:UpdateStateValue(states._states.Equipping.StateName, false)
-				end)
-			end
+		if self._ActiveWeapon then
+			warn("[BaseCombatService] - There's already an active weapon in use.")
+			return
 		end
+
+		local WeaponData = self:_getWeaponData(number)
+
+		-- Finish off initalizing the states table and set it as the active weapon.
+		local states: Types.StateData = self:_initWeaponTbl(initVariables)
+		states._weaponData = WeaponData
+		self._ActiveWeapon = states
+
+		-- Update the state value to true to prevent sudden unequips.
+		self._StateManager:UpdateStateValue(states._states.Equipping.StateName, true)
+
+		-- Attach the model and begin the equip animation.
+		self._ViewmodelHelper:AttachViewmodel(WeaponData.WeaponName)
+		self._ViewmodelHelper:PlayAnimation(WeaponData.WeaponEquipAnim, function()
+			self._StateManager:UpdateStateValue(states._states.Equipping.StateName, false)
+		end)
 	end))
 
 	-- Unequipping Functionality
 	self._maid:GiveTask(self._BaseCombatInput.WeaponUnequipping:Connect(function(number)
+		if self._ActiveWeapon == nil then
+			warn("[BaseCombatService] - Cannot unequip nothing.")
+			return
+		end
+
 		-- Check's tagged weapons to see if we're unequipping the correct one.
-		for i, v in ipairs(self._TaggedWeapons) do
-			if i == number then
-				local weaponName = v.WeaponData.WeaponName
+		local WeaponData = self:_getWeaponData(number)
+		local weaponName = WeaponData.WeaponName
 
-				-- Check if the names match.
-				if self._ActiveWeapon._weaponData.WeaponName == weaponName then
-					if self:_checkStateVariables() then
-						warn("[BaseWeaponService] - A state is active at this time cannot preform action.")
-						return
-					end
-
-					-- self._StateManager:UpdateStateValue(, _)
-
-					-- Assuming the animation has a destroy event we destroy it a bit early to prevent visibility.
-					self._ViewmodelHelper:PlayAnimationWithEvent(
-						self._ActiveWeapon._weaponData.WeaponUnequipAnim,
-						"DestroyModel",
-						function()
-							-- Cleanup callback.
-							self._ActiveWeapon._stateBrio:Kill()
-							self._ActiveWeapon = nil
-							self._ViewmodelHelper:DetachViewmodel()
-						end
-					)
-				end
+		-- Check if the names match.
+		if self._ActiveWeapon._weaponData.WeaponName == weaponName then
+			if self:_checkStateVariables() then
+				warn("[BaseCombatService] - A state is active at this time cannot preform action.")
+				return
 			end
+
+			-- self._StateManager:UpdateStateValue(, _)
+
+			-- Assuming the animation has a destroy event we destroy it a bit early to prevent visibility.
+			self._ViewmodelHelper:PlayAnimationWithEvent(
+				self._ActiveWeapon._weaponData.WeaponUnequipAnim,
+				"DestroyModel",
+				function()
+					-- Cleanup callback.
+					self._ActiveWeapon._stateBrio:Kill()
+					self._ActiveWeapon = nil
+					self._ViewmodelHelper:DetachViewmodel()
+				end
+			)
 		end
 	end))
 
 	-- Firing Functionality
 	self._maid:GiveTask(self._BaseCombatInput.WeaponFired:Connect(function()
-		-- Add a function to determine if any of the variables are true.
+		-- If there's no active weapon don't bother.
+		if self._ActiveWeapon == nil then
+			warn("[BaseCombatService] - No weapon equipped cannot proceed.")
+			return
+		end
 
-		self._ViewmodelHelper:PlayAnimation("a", "a")
+		-- If any variable is active return.
+		if self:_checkStateVariables() then
+			warn("[BaseCombatService] - A state is active at this time cannot preform action.")
+			return
+		end
+
+		-- Retrieve's the weapon data and make's it a bit easier to access/work with :-]
+		local WeaponData = self._ActiveWeapon
+
+		self._StateManager:UpdateStateValue(WeaponData._states.Firing.StateName, true)
+
+		self._ViewmodelHelper:PlayAnimation(WeaponData._weaponData.WeaponFireAnim, function()
+			self._StateManager:UpdateStateValue(WeaponData._states.Firing.StateName, false)
+		end)
 	end))
 
 	-- Inspecting Functionality
+	self._maid:GiveTask(self._BaseCombatInput.WeaponInspected:Connect(function()
+		print("Inspect.")
+	end))
 
 	-- Reloading Functionality
 end
@@ -257,6 +291,54 @@ function BaseCombatService:_checkStateVariables(): boolean
 		return true
 	else
 		return false
+	end
+end
+
+--[[
+	Retrieve's a weapons data based off there index inside the tagged weapons table.
+
+	@param index number -- The index of weaponData you want to find.
+
+	@return {}
+]]
+function BaseCombatService:_getWeaponData(index: number): {}
+	-- A bit of type checking.
+	if typeof(index) ~= "number" then
+		warn(string.format("[BaseCombatService] - Type of index %q is not a valid type.", typeof(index)))
+		return
+	end
+
+	-- The main loop.
+	for i, v in pairs(self._TaggedWeapons) do
+		-- If the index's match we return the data.
+		if index == i then
+			return v.WeaponData
+		end
+	end
+
+	warn(string.format("[BaseCombatService] - Could not find weaponData at index %i", index))
+	return nil
+end
+
+--[[
+	Generate's viewmodel's into tools.
+
+	@return ()
+]]
+function BaseCombatService:_generateTools(): ()
+	-- Some variables that I needed.
+	local ViewmodelPath = game.ReplicatedStorage.Shared.Viewmodels
+	local Player: Player = self._Player
+	local Backpack = Player.Backpack
+
+	for _, v in pairs(ViewmodelPath:GetChildren()) do
+		print(v)
+		local newTool = Instance.new("Tool")
+		newTool.Name = v.Name
+		newTool.Parent = Backpack
+		newTool:AddTag("Weapon")
+
+		print(newTool)
 	end
 end
 

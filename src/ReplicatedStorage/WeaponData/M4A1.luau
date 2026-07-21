@@ -11,19 +11,19 @@ local M4A1 = {
 
 	-- Sounds
 	Sounds = {
-		FireSound = "",
-		EquipSound = "",
-		UnequipSound = "",
-		FireModeSound = "",
-		ReloadSound = "",
-		InspectSound = "",
+		FireSound = { Id = "rbxassetid://5096003821" },
+		EquipSound = { Id = "rbxassetid://104445304303143" },
+		UnequipSound = { Id = "rbxassetid://104445304303143" },
+		FireModeSound = { Id = "rbxassetid://131169866964949" },
+		ReloadSound = { Id = "rbxassetid://111236667677398" },
+		InspectSound = { Id = "rbxassetid://109520982059397" },
 	},
 
 	-- Animations
 	Animations = {
 		WeaponEquipAnim = "rbxassetid://93263765397131",
 		WeaponUnequipAnim = "rbxassetid://104773513340363",
-		WeaponFireAnim = "",
+		WeaponFireAnim = "rbxassetid://116920988262292",
 		WeaponReloadAnim = "",
 		WeaponInspectAnim = "",
 	},

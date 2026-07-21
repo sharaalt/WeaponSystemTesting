@@ -8,6 +8,7 @@
 
 -- External Services
 local UserInputService = game:GetService("UserInputService")
+local BaseCombatServiceConstants = require(script.Parent.Parent.Parent.Shared.Modules.BaseCombatServiceConstants)
 
 local loader = require(script.Parent.Parent.loader)
 local require = loader.load(script)
@@ -32,7 +33,8 @@ function BaseCombatInput.new()
 	self.WeaponAimed = Signal.new()
 	self.WeaponEquipped = Signal.new()
 	self.WeaponReloading = Signal.new()
-	self.WeaponEquipping = Signal.new()
+	self.WeaponFireModeChanged = Signal.new()
+	self.WeaponInspected = Signal.new()
 	self.WeaponUnequipping = Signal.new()
 
 	self._maid:GiveTask(task.spawn(function()
@@ -68,13 +70,15 @@ function BaseCombatInput:_InputLoop()
 	local ConnectionOne = UserInputService.InputBegan:Connect(function(input: InputObject)
 		if numbers[input.KeyCode] then
 			self.WeaponEquipped:Fire(numbers[input.KeyCode])
-		elseif input.KeyCode == Enum.KeyCode.R then
-			self.WeaponReloading:Fire()
-		elseif input.KeyCode == Enum.KeyCode.F then
-			print("Changing Firing Mode")
-		elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+		elseif input.KeyCode == BaseCombatServiceConstants.Keybinds.RELOAD_KEYBIND then
+			self.WeaponReloading:Fire(numbers[input.KeyCode])
+		elseif input.KeyCode == BaseCombatServiceConstants.Keybinds.FIREMODE_KEYBIND then
+			self.WeaponFireModeChanged:Fire(numbers[input.KeyCode])
+		elseif input.KeyCode == BaseCombatServiceConstants.Keybinds.INSPECT_KEYBIND then
+			self.WeaponInspected:Fire(numbers[input.KeyCode])
+		elseif input.UserInputType == BaseCombatServiceConstants.Keybinds.FIRE_KEYBIND then
 			self.WeaponFired:Fire()
-		elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+		elseif input.UserInputType == BaseCombatServiceConstants.Keybinds.AIM_KEYBIND then
 			self.WeaponAimed:Fire()
 		end
 	end)
