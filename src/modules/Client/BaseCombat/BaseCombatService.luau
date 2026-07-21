@@ -168,6 +168,8 @@ function BaseCombatService:_mainLoop(): ()
 		-- Retrieve's the weapon data and make's it a bit easier to access/work with :-]
 		local WeaponData = self._ActiveWeapon
 
+		print(WeaponData)
+
 		self._StateManager:UpdateStateValue(WeaponData._states.Firing.StateName, true)
 
 		self._ViewmodelHelper:PlayAnimation(WeaponData._weaponData.WeaponFireAnim, function()
@@ -177,7 +179,25 @@ function BaseCombatService:_mainLoop(): ()
 
 	-- Inspecting Functionality
 	self._maid:GiveTask(self._BaseCombatInput.WeaponInspected:Connect(function()
-		print("Inspect.")
+		-- If there's no active weapon don't bother.
+		if self._ActiveWeapon == nil then
+			warn("[BaseCombatService] - No weapon equipped cannot proceed.")
+			return
+		end
+
+		-- If any variable is active return.
+		if self:_checkStateVariables() then
+			warn("[BaseCombatService] - A state is active at this time cannot preform action.")
+			return
+		end
+
+		local WeaponData = self._ActiveWeapon
+
+		self._StateManager:UpdateStateValue(WeaponData._states.Inspecting.StateName, true)
+
+		self._ViewmodelHelper:PlayAnimation(WeaponData._weaponData.WeaponInspectAnim, function()
+			self._StateManager:UpdateStateValue(WeaponData._states.Inspecting.StateName, false)
+		end)
 	end))
 
 	-- Reloading Functionality
@@ -279,8 +299,7 @@ function BaseCombatService:_checkStateVariables(): boolean
 	local stateValues: { [string]: boolean } = self._ActiveWeapon._states
 
 	-- Determines if any variable in the state pool is true.
-	for i, value in pairs(stateValues) do
-		print(i, value)
+	for _, value in pairs(stateValues) do
 		if value.StateValue then
 			trueVariables += 1
 		end

@@ -25,7 +25,7 @@ local M4A1 = {
 		WeaponUnequipAnim = "rbxassetid://104773513340363",
 		WeaponFireAnim = "rbxassetid://116920988262292",
 		WeaponReloadAnim = "",
-		WeaponInspectAnim = "",
+		WeaponInspectAnim = "rbxassetid://136612778191367",
 	},
 }
 
